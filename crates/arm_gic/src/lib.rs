@@ -45,3 +45,6 @@ pub enum TriggerMode {
     /// level is active, and deasserted whenever the level is not active.
     Level = 1,
 }
+
+//#[cfg(feature = "hv")]
+pub const GIC_LIST_REGS_NUM: usize = 64;

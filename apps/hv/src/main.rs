@@ -43,6 +43,10 @@ fn main(hart_id: usize) {
         info!("vm run cpu{}", hart_id);
         vm.run(0);
     }
+    #[cfg(target_arch = "aarch64")]
+    {
+        
+    }
     #[cfg(not(target_arch = "riscv64"))]
     {
         panic!("Other arch is not supported yet!")

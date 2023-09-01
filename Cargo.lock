@@ -8,7 +8,7 @@ version = "9.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb711c57d60565ba8f6523eb371e6243639617d817b4df1ae09af250af1af411"
 dependencies = [
- "tock-registers",
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
@@ -154,14 +154,14 @@ dependencies = [
 name = "arm_gic"
 version = "0.1.0"
 dependencies = [
- "tock-registers",
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
 name = "arm_pl011"
 version = "0.1.0"
 dependencies = [
- "tock-registers",
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
@@ -326,7 +326,7 @@ dependencies = [
  "sbi-rt",
  "spinlock",
  "static_assertions",
- "tock-registers",
+ "tock-registers 0.8.1",
  "x2apic",
  "x86",
  "x86_64",
@@ -618,6 +618,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
+name = "cortex-a"
+version = "7.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdecfbb28672ad3664e71ae05a398a52df430d86d660691501b28968cc4467e6"
+dependencies = [
+ "tock-registers 0.7.0",
+]
+
+[[package]]
 name = "crate_interface"
 version = "0.1.1"
 dependencies = [
@@ -893,7 +902,9 @@ checksum = "fed44880c466736ef9a5c5b5facefb5ed0785676d0c02d612db14e54f0d84286"
 name = "hypercraft"
 version = "0.1.0"
 dependencies = [
+ "arm_gic",
  "arrayvec",
+ "cortex-a",
  "log",
  "memoffset",
  "page_table",
@@ -903,7 +914,7 @@ dependencies = [
  "sbi-rt",
  "sbi-spec 0.0.6",
  "spin 0.9.8",
- "tock-registers",
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
@@ -1672,6 +1683,12 @@ dependencies = [
 [[package]]
 name = "timer_list"
 version = "0.1.0"
+
+[[package]]
+name = "tock-registers"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ee8fba06c1f4d0b396ef61a54530bb6b28f0dc61c38bc8bc5a5a48161e6282e"
 
 [[package]]
 name = "tock-registers"

@@ -42,6 +42,7 @@ pub use gpm::GuestPageTable;
 #[cfg(feature = "hv")]
 pub use hv::HyperCraftHalImpl;
 
+
 const LOGO: &str = r#"
        d8888                            .d88888b.   .d8888b.
       d88888                           d88P" "Y88b d88P  Y88b
@@ -302,6 +303,14 @@ fn init_interrupt() {
         axtask::on_timer_tick();
     });
 
+    #[cfg(all(feature = "hv", target_arch = "aarch64"))]
+    {
+        
+        pub use hv::{ipi_irq_handler, maintenance_irq_handler, timer_irq_handler};
+        axhal::irq::register_handler(IPI_IRQ_NUM, ipi_irq_handler());
+        axhal::irq::register_handler(MAINTENANCE_IRQ_NUM, maintenance_irq_handler());
+        axhal::irq::register_handler(HYPERVISOR_TIMER_IRQ_NUM, timer_irq_handler());
+    }
     // Enable IRQs before starting app
     axhal::arch::enable_irqs();
 }
