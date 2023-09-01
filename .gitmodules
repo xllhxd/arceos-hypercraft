@@ -1,0 +1,4 @@
+[submodule "crates/hypercraft"]
+    path = crates/hypercraft
+    url = https://github.com/915604903T/hypercraft.git
+    branch = new
