@@ -3,9 +3,15 @@ use core::arch::global_asm;
 use aarch64_cpu::registers::{ESR_EL1, FAR_EL1};
 use tock_registers::interfaces::Readable;
 
+#[cfg(feature = "hv")]
+use hypercraft::arch::exception::{lower_aarch64_synchronous, lower_aarch64_irq};
+
 use super::TrapFrame;
 
+#[cfg(not(feature = "hv"))]
 global_asm!(include_str!("trap.S"));
+#[cfg(feature = "hv")]
+global_asm!(include_str!("trap_hv.S"));
 
 #[repr(u8)]
 #[derive(Debug)]

@@ -313,6 +313,7 @@ dependencies = [
  "cfg-if",
  "crate_interface 0.1.1",
  "handler_table",
+ "hypercraft",
  "kernel_guard",
  "lazy_init",
  "log",

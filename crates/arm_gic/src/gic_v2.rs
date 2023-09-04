@@ -395,13 +395,19 @@ impl GicCpuInterface {
         unsafe { self.base.as_ref() }
     }
 
+    // When interrupt priority drop is separated from interrupt deactivation, 
+    // a write to this register deactivates the specified interrupt.
+    pub fn set_dir(&self, dir: u32) {
+        self.regs().DIR.set(dir);
+    }
+    
     /// Returns the interrupt ID of the highest priority pending interrupt for
     /// the CPU interface. (read GICC_IAR)
     ///
     /// The read returns a spurious interrupt ID of `1023` if the distributor
     /// or the CPU interface are disabled, or there is no pending interrupt on
     /// the CPU interface.
-    pub fn iar(&self) -> u32 {
+    pub fn get_iar(&self) -> u32 {
         self.regs().IAR.get()
     }
 
@@ -409,10 +415,10 @@ impl GicCpuInterface {
     /// specified interrupt. (write GICC_EOIR)
     ///
     /// The value written must be the value returns from [`Self::iar`].
-    pub fn eoi(&self, iar: u32) {
+    pub fn set_eoi(&self, iar: u32) {
         self.regs().EOIR.set(iar);
     }
-
+    
     /// Controls the CPU interface, including enabling of interrupt groups, 
     /// interrupt signal bypass, binary point registers used, and separation 
     /// of priority drop and interrupt deactivation.
@@ -436,11 +442,11 @@ impl GicCpuInterface {
     where
         F: FnOnce(u32),
     {
-        let iar = self.iar();
+        let iar = self.get_iar();
         let vector = iar & 0x3ff;
         if vector < 1020 {
             handler(vector);
-            self.eoi(iar);
+            self.set_eoi(iar);
         } else {
             // spurious
         }
