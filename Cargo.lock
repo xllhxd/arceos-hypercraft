@@ -154,6 +154,7 @@ dependencies = [
 name = "arm_gic"
 version = "0.1.0"
 dependencies = [
+ "spin 0.9.8",
  "tock-registers 0.8.1",
 ]
 
