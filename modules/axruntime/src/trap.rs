@@ -21,6 +21,7 @@ impl axhal::trap::TrapHandler for TrapHandlerImpl {
             if _irq_num >= 0 && _irq_num <=15 {
                 axhal::irq::dispatch_irq(_irq_num);
             } else if _irq_num >= 16 && _irq_num <=32 {
+                //todo()
                 interrupt_handler(_irq_num);
             } 
             drop(guard);

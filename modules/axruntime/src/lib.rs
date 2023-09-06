@@ -305,11 +305,7 @@ fn init_interrupt() {
 
     #[cfg(all(feature = "hv", target_arch = "aarch64"))]
     {
-        
-        pub use hv::{ipi_irq_handler, maintenance_irq_handler, timer_irq_handler};
-        axhal::irq::register_handler(IPI_IRQ_NUM, ipi_irq_handler());
-        axhal::irq::register_handler(MAINTENANCE_IRQ_NUM, maintenance_irq_handler());
-        axhal::irq::register_handler(HYPERVISOR_TIMER_IRQ_NUM, timer_irq_handler());
+        hv::interrupt_register_for_aarch64_hv();
     }
     // Enable IRQs before starting app
     axhal::arch::enable_irqs();
