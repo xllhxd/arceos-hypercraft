@@ -33,7 +33,10 @@ pub static GICH: GicHypervisorInterface = GicHypervisorInterface::new(phys_to_vi
 
 /// Enables or disables the given IRQ.
 pub fn set_enable(irq_num: usize, enabled: bool) {
+    #[cfg(not(feature = "hv"))]
     GICD.lock().set_enable(irq_num as _, enabled);
+    #[cfg(feature = "hv")]
+    arch::interrupt_arch_enable(irq_num as _, enabled);
 }
 
 /// Registers an IRQ handler for the given IRQ.

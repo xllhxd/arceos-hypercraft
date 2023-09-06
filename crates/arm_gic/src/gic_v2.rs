@@ -3,14 +3,11 @@
 //! The official documentation: <https://developer.arm.com/documentation/ihi0048/latest/>
 
 use core::ptr::NonNull;
-use spin::Mutex;
 
 use crate::{TriggerMode, GIC_MAX_IRQ, SPI_RANGE, SGI_RANGE, GIC_LIST_REGS_NUM, GIC_CONFIG_BITS};
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::register_structs;
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
-
-static GICD_LOCK: Mutex<()> = Mutex::new(());
 
 register_structs! {
     /// GIC Distributor registers.
@@ -233,13 +230,11 @@ impl GicDistributor {
         let reg = vector / 32;
         let mask = 1 << (vector % 32);
         
-        let lock = GICD_LOCK.lock();
         if enable {
             self.regs().ISENABLER[reg].set(mask);
         } else {
             self.regs().ICENABLER[reg].set(mask);
         }
-        drop(lock);
     }
 
     /// Set SGIR for sgi int id and target cpu.
@@ -262,12 +257,10 @@ impl GicDistributor {
         let offset = (int_id * 8) % 32;
         let mask: u32 = 0xff << offset;
 
-        let lock = GICD_LOCK.lock();
         let prev_reg_val = self.regs().IPRIORITYR[idx].get();
         // clear target int_id priority and set its priority.
         let reg_val = (prev_reg_val & !mask) | (((priority as u32) << offset) & mask);
         self.regs().IPRIORITYR[idx].set(reg_val);
-        drop(lock);
     }
 
     /// Get interrupt target cpu.
@@ -283,18 +276,16 @@ impl GicDistributor {
         let offset = (int_id * 8) % 32;
         let mask: u32 = 0xff << offset;
 
-        let lock = GICD_LOCK.lock();
         let prev_reg_val = self.regs().ITARGETSR[idx].get();
         // clear target int_id priority and set its priority.
         let reg_val = (prev_reg_val & !mask) | (((target as u32) << offset) & mask);
         // println!("idx {}, val {:x}", idx, value);
         self.regs().ITARGETSR[idx].set(reg_val);
-        drop(lock);
+
     }
 
     /// Set interrupt state to pending or not.
     pub fn set_pend(&self, int_id: usize, is_pend: bool, current_cpu_id: usize) {
-        let lock = GICD_LOCK.lock();
         if SGI_RANGE.contains(&int_id) {
             let reg_idx = int_id / 4;
             let offset = (int_id % 4) * 8;
@@ -312,7 +303,6 @@ impl GicDistributor {
                 self.regs().ICPENDR[reg_idx].set(mask);
             }
         }
-        drop(lock);
     }
 
     /// Set interrupt state to active or not.
@@ -320,13 +310,11 @@ impl GicDistributor {
         let reg_idx = int_id / 32;
         let mask = 1 << int_id % 32;
 
-        let lock = GICD_LOCK.lock();
         if is_active {
             self.regs().ISACTIVER[reg_idx].set(mask);
         } else {
             self.regs().ICACTIVER[reg_idx].set(mask);
         }
-        drop(lock);
     }
 
     /// Set interrupt state. Depend on its active state and pending state.
@@ -340,7 +328,6 @@ impl GicDistributor {
         let reg_idx = int_id / 32;
         let mask = 1 << int_id % 32;
 
-        let lock = GICD_LOCK.lock();
         let pend = if (self.regs().ISPENDR[reg_idx].get() & mask) != 0 {
             0b01
         } else {
@@ -351,20 +338,17 @@ impl GicDistributor {
         } else {
             0b00
         };
-        drop(lock);
         return pend | active;
     }
 
     /// Determines whether the corresponding interrupt is edge-triggered or level-sensitive.
     pub fn set_icfgr(&self, int_id: usize, cfg: u8) {
-        let lock = GICD_LOCK.lock();
         let reg_ind = (int_id * GIC_CONFIG_BITS) / 32;
         let off = (int_id * GIC_CONFIG_BITS) % 32;
         let mask = 0b11 << off;
 
         let icfgr = self.regs().ICFGR[reg_ind].get();
         self.regs().ICFGR[reg_ind].set((icfgr & !mask) | (((cfg as u32) << off) & mask));
-        drop(lock);
     }
 
 

@@ -4,7 +4,7 @@ struct TrapHandlerImpl;
 
 #[crate_interface::impl_interface]
 impl axhal::trap::TrapHandler for TrapHandlerImpl {
-    #[cfg(not(any(feature = "hv", target_arch = "aarch64")))]
+    // #[cfg(not(any(feature = "hv", target_arch = "aarch64")))]
     fn handle_irq(_irq_num: usize) {
         #[cfg(feature = "irq")]
         {
@@ -13,6 +13,7 @@ impl axhal::trap::TrapHandler for TrapHandlerImpl {
             drop(guard); // rescheduling may occur when preemption is re-enabled.
         }
     }
+    /* 
     #[cfg(feature = "hv", target_arch = "aarch64")]
     fn handle_irq(_irq_num: usize) {
         #[cfg(feature = "irq")]
@@ -27,4 +28,5 @@ impl axhal::trap::TrapHandler for TrapHandlerImpl {
             drop(guard);
         }
     }
+    */
 }

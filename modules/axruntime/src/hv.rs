@@ -4,9 +4,6 @@ use hypercraft::{HostPhysAddr, HyperCraftHal};
 
 #[cfg(target_arch = "aarch64")]
 pub use hypercraft::arch::{current_cpu, ipi_irq_handler, timer_irq_handler, timer_irq_handler, interrupt_init};
-#[cfg(target_arch = "aarch64")]
-pub use axhal::platform::aarch64_common::{GICH, GICC, GICD};
-
 
 /// An empty struct to implementate of `HyperCraftHal`
 pub struct HyperCraftHalImpl;
