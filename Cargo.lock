@@ -907,6 +907,7 @@ dependencies = [
  "arm_gic",
  "arrayvec",
  "cortex-a",
+ "fdt",
  "log",
  "memoffset",
  "page_table",

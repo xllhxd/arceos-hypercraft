@@ -232,7 +232,7 @@ impl GicDistributor {
         }
         let reg = vector / 32;
         let mask = 1 << (vector % 32);
-
+        
         let lock = GICD_LOCK.lock();
         if enable {
             self.regs().ISENABLER[reg].set(mask);
@@ -489,7 +489,11 @@ impl GicCpuInterface {
     /// This function should be called only once.
     pub fn init(&self) {
         // enable GIC0
+        #[cfg(not(feature = "hv"))]
         self.regs().CTLR.set(1);
+        #[cfg(feature = "hv")]
+        // set EOImodeNS and EN bit for hypervisor
+        self.regs().CTLR.set(1| 0x200);
         // unmask interrupts at all priority levels
         self.regs().PMR.set(0xff);
     }
