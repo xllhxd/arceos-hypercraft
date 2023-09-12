@@ -904,10 +904,12 @@ checksum = "fed44880c466736ef9a5c5b5facefb5ed0785676d0c02d612db14e54f0d84286"
 name = "hypercraft"
 version = "0.1.0"
 dependencies = [
+ "aarch64-cpu",
  "arm_gic",
  "arrayvec",
  "cortex-a",
  "fdt",
+ "lazy_static",
  "log",
  "memoffset",
  "page_table",
@@ -918,7 +920,7 @@ dependencies = [
  "sbi-spec 0.0.6",
  "spin 0.9.8",
  "spinlock",
- "tock-registers 0.7.0",
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
