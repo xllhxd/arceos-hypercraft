@@ -914,6 +914,8 @@ dependencies = [
  "memoffset",
  "page_table",
  "page_table_entry",
+ "percpu",
+ "percpu_macros",
  "riscv 0.6.0",
  "riscv-decode",
  "sbi-rt",
