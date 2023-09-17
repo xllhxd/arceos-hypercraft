@@ -43,7 +43,17 @@ fn main(hart_id: usize) {
         info!("vm run cpu{}", hart_id);
         vm.run(0);
     }
-    #[cfg(not(target_arch = "riscv64"))]
+    #[cfg(target_arch = "x86_64")]
+    {
+        println!("into main {}", hart_id);
+
+        let mut p = PerCpu::<HyperCraftHalImpl>::new(hart_id);
+        p.hardware_enable().unwrap();
+        p.hardware_disable().unwrap();
+
+        return;
+    }
+    #[cfg(not(any(target_arch = "riscv64", target_arch = "x86_64")))]
     {
         panic!("Other arch is not supported yet!")
     }

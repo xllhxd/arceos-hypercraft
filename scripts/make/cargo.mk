@@ -57,7 +57,9 @@ endif
 rustc_flags := -Clink-args="-T$(LD_SCRIPT) -no-pie"
 
 ifeq ($(HV), y)
-  rustc_flags += -Ctarget-feature=+h
+  ifeq ($(ARCH), riscv64)
+    rustc_flags += -Ctarget-feature=+h
+  endif
 endif 
 
 define cargo_build
