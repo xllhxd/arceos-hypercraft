@@ -36,7 +36,11 @@ pub fn set_enable(irq_num: usize, enabled: bool) {
     #[cfg(not(feature = "hv"))]
     GICD.lock().set_enable(irq_num as _, enabled);
     #[cfg(feature = "hv")]
-    arch::interrupt_arch_enable(irq_num as _, enabled);
+    {
+        GICD.lock().set_priority(irq_num as _, 0x7f);
+        GICD.lock().set_target_cpu(irq_num as _, 1 << 0);   // only enable one cpu
+        GICD.lock().set_enable(irq_num as _, en);
+    }
 }
 
 /// Registers an IRQ handler for the given IRQ.

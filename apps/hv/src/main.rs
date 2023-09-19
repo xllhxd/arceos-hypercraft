@@ -45,7 +45,25 @@ fn main(hart_id: usize) {
     }
     #[cfg(target_arch = "aarch64")]
     {
-        
+        // boot cpu
+        PerCpu::<HyperCraftHalImpl>::init(0, 0x4000);   // change to pub const CPU_STACK_SIZE: usize = PAGE_SIZE * 128?
+
+        // get current percpu
+        let pcpu = PerCpu::<HyperCraftHalImpl>::this_cpu();
+
+        // create vcpu, need to change addr for aarch64!
+        let gpt = setup_gpm(0x9000_0000).unwrap();  
+        let vcpu = pcpu.create_vcpu(0).unwrap();
+        let mut vcpus = VmCpus::new();
+
+        // add vcpu into vm
+        vcpus.add_vcpu(vcpu).unwrap();
+        let mut vm: VM<HyperCraftHalImpl, GuestPageTable> = VM::new(vcpus, gpt, 0).unwrap();
+        vm.init_cpu(0x80080000, 0x80000000);
+
+        info!("vm run cpu{}", hart_id);
+        // suppose hart_id to be 0
+        vm.run(0);
     }
     #[cfg(not(target_arch = "riscv64"))]
     {

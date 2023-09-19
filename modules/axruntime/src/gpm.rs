@@ -1,12 +1,18 @@
 use axhal::mem::{PhysAddr, VirtAddr};
-use hypercraft::{GuestPageTableTrait, GuestPhysAddr, HyperError, HyperResult, NestedPageTable};
+// #[cfg(target_arch = "riscv64")]
+// use hypercraft::{GuestPageTableTrait, GuestPhysAddr, HyperError, HyperResult, NestedPageTable};
+// #[cfg(target_arch = "aarch64")]
+use hypercraft::{GuestPageTableTrait, GuestPhysAddr, HyperError, HyperResult, A64HVPageTable};
 
 use page_table_entry::MappingFlags;
 
 pub type GuestPagingIfImpl = axhal::paging::PagingIfImpl;
 
 /// Guest Page Table struct
+// #[cfg(target_arch = "riscv64")]
 pub struct GuestPageTable(NestedPageTable<GuestPagingIfImpl>);
+// #[cfg(target_arch = "aarch64")]
+pub struct GuestPageTable(A64HVPageTable<GuestPagingIfImpl>);
 
 impl GuestPageTableTrait for GuestPageTable {
     fn new() -> HyperResult<Self> {
@@ -16,7 +22,13 @@ impl GuestPageTableTrait for GuestPageTable {
                 .map_err(|_| HyperError::NoMemory)?;
             Ok(GuestPageTable(npt))
         }
-        #[cfg(not(target_arch = "riscv64"))]
+        //#[cfg(target_arch = "aarch64")]
+        {
+            let agpt = A64HVPageTable::<GuestPagingIfImpl>::try_new()
+            .map_err(|_| HyperError::NoMemory)?;
+            Ok(GuestPageTable(agpt))
+        }
+        #[cfg(target_arch = "x86_64")]
         {
             todo!()
         }
@@ -107,7 +119,11 @@ impl GuestPageTableTrait for GuestPageTable {
         {
             8usize << 60 | usize::from(self.0.root_paddr()) >> 12
         }
-        #[cfg(not(target_arch = "riscv64"))]
+        #[cfg(target_arch = "aarch64")]
+        {
+            usize::from(self.0.root_paddr()) << 1   // need to lrs 1 bit for CnP??
+        }
+        #[cfg(target_arch = "x86_64")]
         {
             todo!()
         }
