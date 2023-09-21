@@ -8,7 +8,7 @@ use hypercraft::arch::exception::{lower_aarch64_synchronous, lower_aarch64_irq};
 
 use super::TrapFrame;
 
-#[cfg(not(feature = "hv"))]
+// #[cfg(not(feature = "hv"))]
 global_asm!(include_str!("trap.S"));
 #[cfg(feature = "hv")]
 global_asm!(include_str!("trap_hv.S"));

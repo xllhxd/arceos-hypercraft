@@ -105,6 +105,10 @@ unsafe fn init_boot_page_table() {
     crate::platform::mem::init_boot_page_table(&mut BOOT_PT_L0, &mut BOOT_PT_L1);
 }
 
+extern "C" {
+    fn exception_vector_base();
+}
+
 /// The earliest entry point for the primary CPU.
 #[naked]
 #[no_mangle]
@@ -112,6 +116,15 @@ unsafe fn init_boot_page_table() {
 unsafe extern "C" fn _start() -> ! {
     // PC = 0x8_0000
     // X0 = dtb
+    
+    // set vbar_el2 for hypervisor.
+    #[cfg(feature = "hv")]
+    core::arch::asm!("
+        ldr x0, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
+        msr vbar_el2, x0",
+        exception_vector_base_el2 = sym exception_vector_base_el2,
+    );
+
     core::arch::asm!("
         mrs     x19, mpidr_el1
         and     x19, x19, #0xffffff     // get current CPU id

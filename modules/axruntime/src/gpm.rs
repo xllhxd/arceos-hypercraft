@@ -68,7 +68,7 @@ impl GuestPageTableTrait for GuestPageTable {
         size: usize,
         flags: MappingFlags,
     ) -> HyperResult<()> {
-        #[cfg(target_arch = "riscv64")]
+        #[cfg(any(target_arch = "riscv64", target_arch = "aarch64"))]
         {
             self.0
                 .map_region(VirtAddr::from(gpa), PhysAddr::from(hpa), size, flags, true)
@@ -78,7 +78,7 @@ impl GuestPageTableTrait for GuestPageTable {
                 })?;
             Ok(())
         }
-        #[cfg(not(target_arch = "riscv64"))]
+        #[cfg(target_arch = "x86_64")]
         {
             todo!()
         }
