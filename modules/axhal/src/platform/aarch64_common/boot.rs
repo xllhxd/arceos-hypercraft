@@ -122,7 +122,7 @@ unsafe extern "C" fn _start() -> ! {
     core::arch::asm!("
         ldr x0, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
         msr vbar_el2, x0",
-        exception_vector_base_el2 = sym exception_vector_base_el2,
+        exception_vector_base_el2 = sym crate::arch::trap::exception_vector_base_el2,
     );
 
     core::arch::asm!("

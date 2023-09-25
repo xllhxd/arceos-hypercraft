@@ -38,7 +38,7 @@ mod gpm;
 mod hv;
 
 #[cfg(feature = "hv")]
-pub use gpm::GuestPageTable;
+pub use gpm::{GuestPageTable, AARCH64GuestPageTable};
 #[cfg(feature = "hv")]
 pub use hv::HyperCraftHalImpl;
 
