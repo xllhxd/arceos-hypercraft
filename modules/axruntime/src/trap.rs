@@ -1,5 +1,3 @@
-use hypercraft::interrupt_handler;
-
 struct TrapHandlerImpl;
 
 #[crate_interface::impl_interface]

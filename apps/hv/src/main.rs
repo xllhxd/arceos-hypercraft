@@ -8,10 +8,14 @@ extern crate libax;
 use dtb::MachineMeta;
 use libax::{
     hv::{
-        self, GuestPageTable, AARCH64GuestPageTable, GuestPageTableTrait, HyperCallMsg, HyperCraftHalImpl, 
-        PerCpu, Result, VCpu, VmCpus, VmExitInfo, VM,
+        self, GuestPageTable, GuestPageTableTrait, HyperCraftHalImpl, PerCpu,
+        Result, VCpu, VmCpus, VM,
     },
     info,
+};
+#[cfg(target_arch = "riscv64")]
+use libax::{
+    hv::{HyperCallMsg,VmExitInfo}
 };
 use page_table_entry::MappingFlags;
 
@@ -59,7 +63,7 @@ fn main(hart_id: usize) {
         // add vcpu into vm
         vcpus.add_vcpu(vcpu).unwrap();
         let mut vm: VM<HyperCraftHalImpl, GuestPageTable> = VM::new(vcpus, gpt, 0).unwrap();
-        vm.init_cpu(0x80080000, 0x80000000);
+        vm.init_vm_vcpu(0x80080000, 0x80000000);
 
         info!("vm run cpu{}", hart_id);
         // suppose hart_id to be 0

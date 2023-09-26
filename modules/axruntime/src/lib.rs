@@ -38,7 +38,7 @@ mod gpm;
 mod hv;
 
 #[cfg(feature = "hv")]
-pub use gpm::{GuestPageTable, AARCH64GuestPageTable};
+pub use gpm::GuestPageTable;
 #[cfg(feature = "hv")]
 pub use hv::HyperCraftHalImpl;
 
@@ -138,7 +138,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     info!("Logging is enabled.");
     info!("Primary CPU {} started, dtb = {:#x}.", cpu_id, dtb);
 
-    #[cfg(feature = "hv")]
+    #[cfg(all(feature = "hv", target_arch = "riscv64"))]
     hypercraft::init_hv_runtime();
 
     info!("Found physcial memory regions:");
