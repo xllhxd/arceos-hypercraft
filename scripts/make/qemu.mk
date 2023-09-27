@@ -2,7 +2,13 @@
 
 QEMU := qemu-system-$(ARCH)
 
-GUEST ?= linux
+GUEST :=
+ifeq ($(ARCH), riscv64)
+  GUEST = linux
+else ifeq ($(ARCH), aarch64)
+  GUEST = linux-aarch64
+endif
+
 ROOTFS ?= apps/hv/guest/$(GUEST)/rootfs.img
 GUEST_DTB ?= apps/hv/guest/$(GUEST)/$(GUEST).dtb
 GUEST_BIN ?= apps/hv/guest/$(GUEST)/$(GUEST).bin
@@ -55,10 +61,17 @@ qemu_args-$(GRAPHIC) += \
   -serial mon:stdio
 
 ifeq ($(GUEST), linux)
-  qemu_args-$(HV) += \
-    -drive file=$(ROOTFS),format=raw,id=hd0 \
-	  -device virtio-blk-device,drive=hd0 \
-	  -append "root=/dev/vda rw console=ttyS0" 
+  ifeq ($(ARCH), riscv64)
+    qemu_args-$(HV) += \
+      -drive file=$(ROOTFS),format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0 \
+	    -append "root=/dev/vda rw console=ttyS0" 
+  else ifeq ($(ARCH), aarch64)
+    qemu_args-$(HV) += \
+      -drive file=$(ROOTFS),format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0 \
+	    -append "root=/dev/vda rw console=ttyAMA0" 
+  endif
 else ifeq ($(GUEST), rCore-Tutorial)
   qemu_args-$(HV) += \
     	-drive file=guest/rCore-Tutorial-v3/fs.img,if=none,format=raw,id=x0 \

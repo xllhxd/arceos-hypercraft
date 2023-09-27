@@ -5,7 +5,11 @@ extern crate alloc;
 #[macro_use]
 extern crate libax;
 
-use dtb::MachineMeta;
+#[cfg(target_arch = "riscv64")]
+use dtb_riscv64::MachineMeta;
+#[cfg(target_arch = "aarch64")]
+use dtb_aarch64::MachineMeta;
+
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCraftHalImpl, PerCpu,
@@ -19,7 +23,10 @@ use libax::{
 };
 use page_table_entry::MappingFlags;
 
-mod dtb;
+#[cfg(target_arch = "riscv64")]
+mod dtb_riscv64;
+#[cfg(target_arch = "aarch64")]
+mod dtb_aarch64;
 
 #[no_mangle]
 fn main(hart_id: usize) {
@@ -63,13 +70,13 @@ fn main(hart_id: usize) {
         // add vcpu into vm
         vcpus.add_vcpu(vcpu).unwrap();
         let mut vm: VM<HyperCraftHalImpl, GuestPageTable> = VM::new(vcpus, gpt, 0).unwrap();
-        vm.init_vm_vcpu(0x80080000, 0x80000000);
+        vm.init_vm_vcpu(0, 0x9020_0000, 0x9000_0000);
 
         info!("vm run cpu{}", hart_id);
         // suppose hart_id to be 0
         vm.run(0);
     }
-    #[cfg(not(target_arch = "riscv64"))]
+    #[cfg(target_arch = "x86_64")]
     {
         panic!("Other arch is not supported yet!")
     }
@@ -149,17 +156,10 @@ pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn setup_gpm(dtb: usize) -> Result<AARCH64GuestPageTable> {
-    let mut gpt = AARCH64GuestPageTable::new()?;
+pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
+    let mut gpt = GuestPageTable::new()?;
     let meta = MachineMeta::parse(dtb);
-    if let Some(test) = meta.test_finisher_address {
-        gpt.map_region(
-            test.base_address,
-            test.base_address,
-            test.size + 0x1000,
-            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER | MappingFlags::EXECUTE,
-        )?;
-    }
+
     for virtio in meta.virtio.iter() {
         gpt.map_region(
             virtio.base_address,
@@ -169,38 +169,30 @@ pub fn setup_gpm(dtb: usize) -> Result<AARCH64GuestPageTable> {
         )?;
     }
 
-    if let Some(uart) = meta.uart {
+    if let Some(pl011) = meta.pl011 {
         gpt.map_region(
-            uart.base_address,
-            uart.base_address,
-            0x1000,
+            pl011.base_address,
+            pl011.base_address,
+            pl011.size,
             MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
         )?;
     }
 
-    if let Some(clint) = meta.clint {
+
+    for intc in meta.intc.iter() {
         gpt.map_region(
-            clint.base_address,
-            clint.base_address,
-            clint.size,
+            intc.base_address,
+            intc.base_address,
+            intc.size,
             MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
         )?;
     }
 
-    if let Some(plic) = meta.plic {
+    if let Some(pcie) = meta.pcie {
         gpt.map_region(
-            plic.base_address,
-            plic.base_address,
-            0x20_0000,
-            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
-        )?;
-    }
-
-    if let Some(pci) = meta.pci {
-        gpt.map_region(
-            pci.base_address,
-            pci.base_address,
-            pci.size,
+            pcie.base_address,
+            pcie.base_address,
+            pcie.size,
             MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
         )?;
     }
