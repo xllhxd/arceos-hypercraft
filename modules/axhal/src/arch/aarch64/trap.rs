@@ -4,7 +4,7 @@ use aarch64_cpu::registers::{ESR_EL1, FAR_EL1};
 use tock_registers::interfaces::Readable;
 
 #[cfg(feature = "hv")]
-use hypercraft::arch::exception::{lower_aarch64_synchronous, lower_aarch64_irq};
+use hypercraft::lower_aarch64_synchronous;
 
 use super::TrapFrame;
 

@@ -80,7 +80,7 @@
 .p2align 7
     SAVE_REGS
     mov     x0, sp
-    bl      lower_aarch64_irq
+    bl      handle_irq_exception
     b       .Lexception_return
 .endm
 

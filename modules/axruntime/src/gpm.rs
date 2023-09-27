@@ -19,7 +19,7 @@ impl GuestPageTableTrait for GuestPageTable {
         }
         #[cfg(target_arch = "aarch64")]
         {
-            let agpt = A64HVPageTable::<GuestPagingIfImpl>::try_new()
+            let agpt = NestedPageTable::<GuestPagingIfImpl>::try_new()
             .map_err(|_| HyperError::NoMemory)?;
             Ok(GuestPageTable(agpt))
         }
