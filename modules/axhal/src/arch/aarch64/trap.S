@@ -74,6 +74,14 @@
     b       .Lexception_return
 .endm
 
+.macro HANDLE_LOWER_SYNC
+.p2align 7
+    SAVE_REGS
+    mov     x0, sp
+    bl      lower_aarch64_synchronous
+    b       .Lexception_return
+.endm
+
 .section .text
 .p2align 11
 .global exception_vector_base
@@ -92,6 +100,34 @@ exception_vector_base:
 
     // lower EL, aarch64
     HANDLE_SYNC
+    HANDLE_IRQ
+    INVALID_EXCP 2 2
+    INVALID_EXCP 3 2
+
+    // lower EL, aarch32
+    INVALID_EXCP 0 3
+    INVALID_EXCP 1 3
+    INVALID_EXCP 2 3
+    INVALID_EXCP 3 3
+
+.section .text
+.p2align 11
+.global exception_vector_base_el2
+exception_vector_base_el2:
+    // current EL, with SP_EL0
+    INVALID_EXCP 0 0
+    INVALID_EXCP 1 0
+    INVALID_EXCP 2 0
+    INVALID_EXCP 3 0
+
+    // current EL, with SP_ELx
+    INVALID_EXCP 1 1
+    HANDLE_IRQ
+    INVALID_EXCP 2 1
+    INVALID_EXCP 3 1
+
+    // lower EL, aarch64
+    HANDLE_LOWER_SYNC
     HANDLE_IRQ
     INVALID_EXCP 2 2
     INVALID_EXCP 3 2
