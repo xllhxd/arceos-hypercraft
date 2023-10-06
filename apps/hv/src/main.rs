@@ -5,17 +5,22 @@ extern crate alloc;
 #[macro_use]
 extern crate libax;
 
-use dtb::MachineMeta;
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCallMsg, HyperCraftHalImpl, PerCpu, Result,
-        VCpu, VmCpus, VmExitInfo, VM,
+        VCpu, VmCpus, VmExitInfo, VM, phys_to_virt,
     },
     info,
 };
 use page_table_entry::MappingFlags;
 
+#[cfg(target_arch = "riscv64")]
 mod dtb;
+#[cfg(target_arch = "riscv64")]
+use dtb::MachineMeta;
+
+#[cfg(target_arch = "x86_64")]
+mod x64;
 
 #[no_mangle]
 fn main(hart_id: usize) {
@@ -49,6 +54,17 @@ fn main(hart_id: usize) {
 
         let mut p = PerCpu::<HyperCraftHalImpl>::new(hart_id);
         p.hardware_enable().unwrap();
+
+        let gpm = x64::setup_gpm().unwrap();
+        info!("{:#x?}", gpm);
+
+        let mut vcpu = p
+            .create_vcpu(x64::BIOS_ENTRY, gpm.nest_page_table_root())
+            .unwrap();
+
+        println!("Running guest...");
+        vcpu.run();
+
         p.hardware_disable().unwrap();
 
         return;
