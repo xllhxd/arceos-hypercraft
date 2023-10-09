@@ -23,6 +23,9 @@ pub struct MachineMeta {
 
 impl MachineMeta {
     pub fn parse(dtb: usize) -> Self {
+        debug!("this is dtb: {:X}", dtb);
+        let addr: *const i32 = dtb as *const i32; // 请替换为你要读取的地址
+
         let fdt = unsafe { Fdt::from_ptr(dtb as *const u8) }.unwrap();
         let memory = fdt.memory();
         let mut meta = MachineMeta::default();

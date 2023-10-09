@@ -44,7 +44,7 @@ ifeq ($(HV), y)
       -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
   ifeq ($(ARCH), aarch64)
     qemu_args-y += \
-      -machine virtualization=on
+      -machine virtualization=on,gic-version=2
   endif
 else
   qemu_args-y := -m 128M -smp $(SMP) $(qemu_args-$(ARCH))
@@ -76,8 +76,7 @@ ifeq ($(GUEST), linux)
     qemu_args-$(HV) += \
       -drive if=none,file=$(ROOTFS),format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0 \
-	    -append "root=/dev/vda rw console=ttyAMA0" \
-      -d in_asm,strace -D qemu3.log
+	    -append "root=/dev/vda rw console=ttyAMA0"
   endif
 else ifeq ($(GUEST), rCore-Tutorial)
   qemu_args-$(HV) += \
