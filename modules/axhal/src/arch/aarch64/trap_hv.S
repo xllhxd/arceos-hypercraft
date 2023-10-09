@@ -1,4 +1,4 @@
-.macro SAVE_REGS
+.macro SAVE_REGS_EL2
     sub     sp, sp, 34 * 8
     stp     x0, x1, [sp]
     stp     x2, x3, [sp, 2 * 8]
@@ -23,7 +23,7 @@
     stp     x10, x11, [sp, 32 * 8]
 .endm
 
-.macro RESTORE_REGS
+.macro RESTORE_REGS_EL2
     ldp     x10, x11, [sp, 32 * 8]
     ldp     x30, x9, [sp, 30 * 8]
     // msr     sp_el0, x9
@@ -48,70 +48,62 @@
     add     sp, sp, 34 * 8
 .endm
 
-.macro INVALID_EXCP, kind, source
+
+.macro INVALID_EXCP_EL2, kind, source
 .p2align 7
-    SAVE_REGS
+    SAVE_REGS_EL2
     mov     x0, sp
     mov     x1, \kind
     mov     x2, \source
     bl      invalid_exception
-    b       .Lexception_return
+    b       .Lexception_return_el2
 .endm
 
-.macro INVALID_EXCP, kind, source
+.macro HANDLE_IRQ_EL2
 .p2align 7
-    SAVE_REGS
+    SAVE_REGS_EL2
     mov     x0, sp
-    mov     x1, \kind
-    mov     x2, \source
-    bl      invalid_exception
-    b       .Lexception_return
+    bl      handle_irq_exception
+    b       .Lexception_return_el2
 .endm
 
 .macro HANDLE_LOWER_SYNC
 .p2align 7
-    SAVE_REGS
+    SAVE_REGS_EL2
     mov     x0, sp
     bl      lower_aarch64_synchronous
-    b       .Lexception_return
+    b       .Lexception_return_el2
 .endm
 
-.macro HANDLE_IRQ
-.p2align 7
-    SAVE_REGS
-    mov     x0, sp
-    bl      handle_irq_exception
-    b       .Lexception_return
-.endm
 
 .section .text
 .p2align 11
 .global exception_vector_base_el2
 exception_vector_base_el2:
     // current EL, with SP_EL0
-    INVALID_EXCP 0 0
-    INVALID_EXCP 1 0
-    INVALID_EXCP 2 0
-    INVALID_EXCP 3 0
+    INVALID_EXCP_EL2 0 0
+    INVALID_EXCP_EL2 1 0
+    INVALID_EXCP_EL2 2 0
+    INVALID_EXCP_EL2 3 0
 
     // current EL, with SP_ELx
-    INVALID_EXCP 1 1
-    HANDLE_IRQ
-    INVALID_EXCP 2 1
-    INVALID_EXCP 3 1
+    INVALID_EXCP_EL2 1 1
+    HANDLE_IRQ_EL2
+    INVALID_EXCP_EL2 2 1
+    INVALID_EXCP_EL2 3 1
 
     // lower EL, aarch64
     HANDLE_LOWER_SYNC
-    HANDLE_IRQ
-    INVALID_EXCP 2 2
-    INVALID_EXCP 3 2
+    HANDLE_IRQ_EL2
+    INVALID_EXCP_EL2 2 2
+    INVALID_EXCP_EL2 3 2
 
     // lower EL, aarch32
-    INVALID_EXCP 0 3
-    INVALID_EXCP 1 3
-    INVALID_EXCP 2 3
-    INVALID_EXCP 3 3
+    INVALID_EXCP_EL2 0 3
+    INVALID_EXCP_EL2 1 3
+    INVALID_EXCP_EL2 2 3
+    INVALID_EXCP_EL2 3 3
 
-.Lexception_return:
-    RESTORE_REGS
+.Lexception_return_el2:
+    RESTORE_REGS_EL2
     eret

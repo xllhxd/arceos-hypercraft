@@ -2,16 +2,18 @@
 
 QEMU := qemu-system-$(ARCH)
 
-GUEST :=
-ifeq ($(ARCH), riscv64)
-  GUEST = linux
-else ifeq ($(ARCH), aarch64)
-  GUEST = linux-aarch64
-endif
+GUEST := linux
 
 ROOTFS ?= apps/hv/guest/$(GUEST)/rootfs.img
 GUEST_DTB ?= apps/hv/guest/$(GUEST)/$(GUEST).dtb
 GUEST_BIN ?= apps/hv/guest/$(GUEST)/$(GUEST).bin
+
+ifeq ($(ARCH), aarch64)
+  ROOTFS = apps/hv/guest/$(GUEST)/rootfs-aarch64.img
+  GUEST_DTB = apps/hv/guest/$(GUEST)/$(GUEST)-aarch64.dtb
+  GUEST_BIN = apps/hv/guest/$(GUEST)/$(GUEST)-aarch64.bin
+endif
+
 
 ifeq ($(BUS), mmio)
   vdev-suffix := device
@@ -40,6 +42,10 @@ ifeq ($(HV), y)
       -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
     	-device loader,file=$(GUEST_DTB),addr=0x90000000,force-raw=on \
       -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
+  ifeq ($(ARCH), aarch64)
+    qemu_args-y += \
+      -machine virtualization=on
+  endif
 else
   qemu_args-y := -m 128M -smp $(SMP) $(qemu_args-$(ARCH))
 endif
@@ -68,9 +74,10 @@ ifeq ($(GUEST), linux)
 	    -append "root=/dev/vda rw console=ttyS0" 
   else ifeq ($(ARCH), aarch64)
     qemu_args-$(HV) += \
-      -drive file=$(ROOTFS),format=raw,id=hd0 \
+      -drive if=none,file=$(ROOTFS),format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0 \
-	    -append "root=/dev/vda rw console=ttyAMA0" 
+	    -append "root=/dev/vda rw console=ttyAMA0" \
+      -d in_asm,strace -D qemu3.log
   endif
 else ifeq ($(GUEST), rCore-Tutorial)
   qemu_args-$(HV) += \

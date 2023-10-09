@@ -9,6 +9,8 @@ use hypercraft::lower_aarch64_synchronous;
 use super::TrapFrame;
 
 global_asm!(include_str!("trap.S"));
+#[cfg(feature = "hv")]
+global_asm!(include_str!("trap_hv.S"));
 
 #[repr(u8)]
 #[derive(Debug)]

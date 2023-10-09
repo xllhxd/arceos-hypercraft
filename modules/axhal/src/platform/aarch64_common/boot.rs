@@ -105,6 +105,7 @@ unsafe fn init_boot_page_table() {
     crate::platform::mem::init_boot_page_table(&mut BOOT_PT_L0, &mut BOOT_PT_L1);
 }
 
+#[cfg(feature = "hv")]
 extern "C" {
     fn exception_vector_base_el2();
 }
@@ -116,45 +117,6 @@ extern "C" {
 unsafe extern "C" fn _start() -> ! {
     // PC = 0x8_0000
     // X0 = dtb
-    
-    // set vbar_el2 for hypervisor.
-    #[cfg(feature = "hv")]
-    core::arch::asm!("
-        ldr x0, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
-        msr vbar_el2, x0
-
-        mrs     x19, mpidr_el1
-        and     x19, x19, #0xffffff     // get current CPU id
-        mov     x20, x0                 // save DTB pointer
-
-        adrp    x8, {boot_stack}        // setup boot stack
-        add     x8, x8, {boot_stack_size}
-        mov     sp, x8
-
-        bl      {switch_to_el1}         // switch to EL1
-        bl      {init_boot_page_table}
-        bl      {init_mmu}              // setup MMU
-        bl      {enable_fp}             // enable fp/neon
-
-        mov     x8, {phys_virt_offset}  // set SP to the high address
-        add     sp, sp, x8
-
-        mov     x0, x19                 // call rust_entry(cpu_id, dtb)
-        mov     x1, x20
-        ldr     x8, ={entry}
-        blr     x8
-        b      .",
-        exception_vector_base_el2 = sym exception_vector_base_el2,
-        switch_to_el1 = sym switch_to_el1,
-        init_boot_page_table = sym init_boot_page_table,
-        init_mmu = sym init_mmu,
-        enable_fp = sym enable_fp,
-        boot_stack = sym BOOT_STACK,
-        boot_stack_size = const TASK_STACK_SIZE,
-        phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,
-        entry = sym crate::platform::rust_entry,
-        options(noreturn),
-    );
     
     #[cfg(not(feature = "hv"))]
     core::arch::asm!("
@@ -179,6 +141,44 @@ unsafe extern "C" fn _start() -> ! {
         ldr     x8, ={entry}
         blr     x8
         b      .",
+        switch_to_el1 = sym switch_to_el1,
+        init_boot_page_table = sym init_boot_page_table,
+        init_mmu = sym init_mmu,
+        enable_fp = sym enable_fp,
+        boot_stack = sym BOOT_STACK,
+        boot_stack_size = const TASK_STACK_SIZE,
+        phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,
+        entry = sym crate::platform::rust_entry,
+        options(noreturn),
+    );
+
+    // set vbar_el2 for hypervisor.
+    #[cfg(feature = "hv")]
+    core::arch::asm!("
+        ldr x8, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
+        msr vbar_el2, x8
+        
+        mrs     x19, mpidr_el1
+        and     x19, x19, #0xffffff     // get current CPU id
+        mov     x20, x0                 // save DTB pointer
+        adrp    x8, {boot_stack}        // setup boot stack
+        add     x8, x8, {boot_stack_size}
+        mov     sp, x8
+
+        bl      {switch_to_el1}         // switch to EL1
+        bl      {init_boot_page_table}
+        bl      {init_mmu}              // setup MMU
+        bl      {enable_fp}             // enable fp/neon
+
+        mov     x8, {phys_virt_offset}  // set SP to the high address
+        add     sp, sp, x8
+
+        mov     x0, x19                 // call rust_entry(cpu_id, dtb)
+        mov     x1, x20
+        ldr     x8, ={entry}
+        blr     x8
+        b      .",
+        exception_vector_base_el2 = sym exception_vector_base_el2,
         switch_to_el1 = sym switch_to_el1,
         init_boot_page_table = sym init_boot_page_table,
         init_mmu = sym init_mmu,
