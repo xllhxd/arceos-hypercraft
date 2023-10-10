@@ -38,13 +38,17 @@ qemu_args-aarch64 := \
   -kernel $(OUT_BIN)
 
 ifeq ($(HV), y)
-  qemu_args-y := \
-      -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
-    	-device loader,file=$(GUEST_DTB),addr=0x90000000,force-raw=on \
-      -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
-  ifeq ($(ARCH), aarch64)
-    qemu_args-y += \
-      -machine virtualization=on,gic-version=2
+  ifeq ($(ARCH), riscv64)
+    qemu_args-y := \
+        -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
+    	  -device loader,file=$(GUEST_DTB),addr=0x90000000,force-raw=on \
+        -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
+  else ifeq ($(ARCH), aarch64)
+    qemu_args-y := \
+        -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
+    	  -device loader,file=$(GUEST_DTB),addr=0x70000000,force-raw=on \
+        -device loader,file=$(GUEST_BIN),addr=0x70200000,force-raw=on \
+        -machine virtualization=on,gic-version=2
   endif
 else
   qemu_args-y := -m 128M -smp $(SMP) $(qemu_args-$(ARCH))

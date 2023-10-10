@@ -23,9 +23,6 @@ pub struct MachineMeta {
 
 impl MachineMeta {
     pub fn parse(dtb: usize) -> Self {
-        debug!("this is dtb: {:X}", dtb);
-        let addr: *const i32 = dtb as *const i32; // 请替换为你要读取的地址
-
         let fdt = unsafe { Fdt::from_ptr(dtb as *const u8) }.unwrap();
         let memory = fdt.memory();
         let mut meta = MachineMeta::default();
@@ -66,7 +63,7 @@ impl MachineMeta {
             for region in regions {
                 let paddr = region. starting_address as usize;
                 let size = region.size.unwrap();
-                println!("intc addr: {:#x}, size: {:#x}", paddr, size);
+                debug!("intc addr: {:#x}, size: {:#x}", paddr, size);
                 meta.intc.push(Device {
                     base_address: paddr,
                     size,

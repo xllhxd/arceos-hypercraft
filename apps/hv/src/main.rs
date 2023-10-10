@@ -159,16 +159,25 @@ pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
 pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
     let mut gpt = GuestPageTable::new()?;
     let meta = MachineMeta::parse(dtb);
-
+    /* 
     for virtio in meta.virtio.iter() {
         gpt.map_region(
             virtio.base_address,
             virtio.base_address,
-            virtio.size,
+            0x1000, 
             MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
         )?;
+        debug!("finish one virtio");
     }
-
+    */
+    // hard code for virtio_mmio
+    gpt.map_region(
+        0xa000000,
+        0xa000000,
+        0x4000,
+        MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+    )?;
+    
     if let Some(pl011) = meta.pl011 {
         gpt.map_region(
             pl011.base_address,
