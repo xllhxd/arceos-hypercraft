@@ -5,6 +5,7 @@ use libax::hv::{HyperCraftHal, HyperCraftHalImpl, GuestPhysAddr, HostPhysAddr, p
 
 use page_table_entry::MappingFlags;
 
+// about guests
 pub const BIOS_PADDR: HostPhysAddr = 0x4000000;
 pub const BIOS_SIZE: usize = 0x1000;
 
