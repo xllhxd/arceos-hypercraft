@@ -65,6 +65,8 @@ SECTIONS
 
     ekernel = .;
 
+    %EL2CODE%
+    
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)
     }

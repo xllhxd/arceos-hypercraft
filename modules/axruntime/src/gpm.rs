@@ -116,7 +116,7 @@ impl GuestPageTableTrait for GuestPageTable {
         }
         #[cfg(target_arch = "aarch64")]
         {
-            usize::from(self.0.root_paddr()) << 1   // need to lrs 1 bit for CnP??
+            usize::from(self.0.root_paddr())  // need to lrs 1 bit for CnP??
         }
         #[cfg(target_arch = "x86_64")]
         {

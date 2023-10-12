@@ -1,6 +1,9 @@
 mod context;
 pub(crate) mod trap;
 
+#[cfg(feature = "hv")]
+pub(crate) mod trap_el2;
+
 use core::arch::asm;
 
 use aarch64_cpu::registers::{DAIF, TTBR1_EL1, VBAR_EL1};
