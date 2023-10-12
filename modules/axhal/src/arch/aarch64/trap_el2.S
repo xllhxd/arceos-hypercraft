@@ -55,7 +55,7 @@
     mov     x0, sp
     mov     x1, \kind
     mov     x2, \source
-    bl      invalid_exception
+    bl      invalid_exception_el2
     b       .Lexception_return_el2
 .endm
 
@@ -63,7 +63,7 @@
 .p2align 7
     SAVE_REGS_EL2
     mov     x0, sp
-    bl      handle_irq_exception
+    bl      handle_irq_exception_el2
     b       .Lexception_return_el2
 .endm
 
@@ -76,7 +76,8 @@
 .endm
 
 
-.section .text
+# .section .text
+.section .el2code
 .p2align 11
 .global exception_vector_base_el2
 exception_vector_base_el2:

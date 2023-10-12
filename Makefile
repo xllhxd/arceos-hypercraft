@@ -73,6 +73,9 @@ LD_SCRIPT := $(CURDIR)/modules/axhal/linker_$(PLATFORM).lds
 OUT_ELF := $(OUT_DIR)/$(APP_NAME)_$(PLATFORM).elf
 OUT_BIN := $(OUT_DIR)/$(APP_NAME)_$(PLATFORM).bin
 
+ifeq ($(HV), y)
+	LD_SCRIPT = $(CURDIR)/modules/axhal/linker_$(PLATFORM)_hv.lds
+endif
 all: build
 
 include scripts/make/utils.mk
