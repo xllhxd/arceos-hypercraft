@@ -42,7 +42,7 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
     . = ALIGN(4k);
     el2code_ened = .;"#;*/
     el2_link = r#". = 0xff00000000;
-    .el2code (NOLOAD) : ALIGN(4096) {
+    .el2code : ALIGN(4096) {
         *(.el2code)
     }"#;
     } else {
