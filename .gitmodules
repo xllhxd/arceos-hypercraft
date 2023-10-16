@@ -1,3 +1,7 @@
 [submodule "crates/hypercraft"]
 	path = crates/hypercraft
 	url = https://github.com/915604903T/hypercraft
+[submodule "crates/el2_code"]
+    path = crates/el2_code
+    url = https://github.com/915604903T/el2_code
+
