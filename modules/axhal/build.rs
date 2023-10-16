@@ -33,7 +33,7 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
 
     let el2_link: &str;
     if is_hv {
-        /*el2_link = r#". = 0x400000000;
+        /*el2_link = r#". = 0xff00000000;
     el2code_start = ABSOLUTE(.);
     .el2code (NOLOAD) : ALIGN(4k) {
         *(.el2code)
