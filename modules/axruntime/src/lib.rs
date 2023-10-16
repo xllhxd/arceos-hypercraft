@@ -141,6 +141,14 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(all(feature = "hv", target_arch = "riscv64"))]
     hypercraft::init_hv_runtime();
 
+
+    #[cfg(all(feature = "hv", target_arch = "aarch64"))] {
+        info!("111111111111111111111111111111");
+        let a = el2_code::myel2test1(1, 2);
+        info!("testtttttttttttttttttttttttta: {}", a);
+    }
+
+
     info!("Found physcial memory regions:");
     for r in axhal::mem::memory_regions() {
         info!(

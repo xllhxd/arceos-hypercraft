@@ -6,7 +6,7 @@ fn main() {
     let mut is_hv: bool = false;
     if hv == "y" {
         is_hv = true;
-    }
+     }
     let platform = std::env::var("PLATFORM").unwrap_or("dummy".to_string());
     gen_linker_script(&arch, &platform, is_hv).unwrap();
 }
@@ -33,7 +33,7 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
 
     let el2_link: &str;
     if is_hv {
-        /*el2_link = r#". = 0xff00000000;
+        /*el2_link = r#". = 0x400000000;
     el2code_start = ABSOLUTE(.);
     .el2code (NOLOAD) : ALIGN(4k) {
         *(.el2code)
@@ -41,9 +41,9 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
     . = el2code_start + SIZEOF(.el2code);
     . = ALIGN(4k);
     el2code_ened = .;"#;*/
-    el2_link = r#". = 0xff00000000;
-    .el2code : ALIGN(4096) {
-        *(.el2code)
+    el2_link = r#"el2code_start = .;
+    .el2code 0x2000 : AT(el2code_start) ALIGN(4096) {
+        *(.el2code.test)
     }"#;
     } else {
         el2_link = r#""#;

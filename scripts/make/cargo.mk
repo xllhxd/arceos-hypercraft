@@ -54,7 +54,7 @@ ifeq ($(default_features),n)
   build_args += --no-default-features
 endif
 
-rustc_flags := -Clink-args="-T$(LD_SCRIPT) -no-pie"
+rustc_flags := -Clink-args="-T$(LD_SCRIPT)" -C relocation-model=pic
 
 # ifeq ($(HV), y)
 #   rustc_flags += -Ctarget-feature=+h
