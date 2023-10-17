@@ -42,4 +42,3 @@ axtask = { path = "../axtask", default-features = false, optional = true }
 hypercraft = { path = "../../crates/hypercraft", optional = true }
 page_table = { path = "../../crates/page_table", optional = true }
 page_table_entry = { path = "../../crates/page_table_entry", optional = true }
-el2_code = { path = "../../crates/el2_code" }

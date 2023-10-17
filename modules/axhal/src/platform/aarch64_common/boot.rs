@@ -209,8 +209,7 @@ unsafe extern "C" fn _start() -> ! {
     #[cfg(feature = "hv")]
     core::arch::asm!("
         ldr x8, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
-        mov x7, #0x2000
-        msr vbar_el2, x7
+        msr vbar_el2, x8
         
         mrs     x19, mpidr_el1
         and     x19, x19, #0xffffff     // get current CPU id

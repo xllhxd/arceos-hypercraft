@@ -2,11 +2,16 @@ use std::io::Result;
 
 fn main() {
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let hv = std::env::var("HV").unwrap();
+    
     let mut is_hv: bool = false;
-    if hv == "y" {
-        is_hv = true;
-     }
+    let hv_env = std::env::var("HV");
+    if hv_env.is_ok() {
+        let hv = hv_env.unwrap();
+        if hv == "y" {
+            is_hv = true;
+         }
+    }
+    
     let platform = std::env::var("PLATFORM").unwrap_or("dummy".to_string());
     gen_linker_script(&arch, &platform, is_hv).unwrap();
 }
@@ -25,10 +30,12 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
     };
     let ld_content = std::fs::read_to_string("linker.lds.S")?;
     let ld_content = ld_content.replace("%ARCH%", output_arch);
+    
     let ld_content = ld_content.replace(
         "%KERNEL_BASE%",
         &format!("{:#x}", axconfig::KERNEL_BASE_VADDR),
     );
+        
     let ld_content = ld_content.replace("%SMP%", &format!("{}", axconfig::SMP));
 
     let el2_link: &str;
@@ -42,7 +49,7 @@ fn gen_linker_script(arch: &str, platform: &str, is_hv: bool) -> Result<()> {
     . = ALIGN(4k);
     el2code_ened = .;"#;*/
     el2_link = r#"el2code_start = .;
-    .el2code 0x2000 : AT(el2code_start) ALIGN(4096) {
+    .el2code 0x10000 : AT(el2code_start) ALIGN(4096) {
         *(.el2code.test)
     }"#;
     } else {

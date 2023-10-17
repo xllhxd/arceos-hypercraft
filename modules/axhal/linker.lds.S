@@ -62,11 +62,9 @@ SECTIONS
         . = ALIGN(4K);
         ebss = .;
     }
-
+    
     ekernel = .;
 
-    %EL2CODE%
-    
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)
     }
