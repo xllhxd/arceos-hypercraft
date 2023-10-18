@@ -16,17 +16,16 @@
     stp     x26, x27, [sp, 26 * 8]
     stp     x28, x29, [sp, 28 * 8]
 
-    # mrs     x9, sp_el0
+    mov     x1, sp
+    add     x1, x1, #(0x110)
+    stp     x30, x1, [sp, 30 * 8]
     mrs     x10, elr_el2
     mrs     x11, spsr_el2
-    stp     x30, x11, [sp, 30 * 8]
     stp     x10, x11, [sp, 32 * 8]
 .endm
 
 .macro RESTORE_REGS_EL2
     ldp     x10, x11, [sp, 32 * 8]
-    ldp     x30, x9, [sp, 30 * 8]
-    // msr     sp_el0, x9
     msr     elr_el2, x10
     msr     spsr_el2, x11
 

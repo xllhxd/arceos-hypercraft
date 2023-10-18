@@ -2,7 +2,7 @@
 
 QEMU := qemu-system-$(ARCH)
 
-GUEST := linux
+GUEST ?= linux
 
 ROOTFS ?= apps/hv/guest/$(GUEST)/rootfs.img
 GUEST_DTB ?= apps/hv/guest/$(GUEST)/$(GUEST).dtb
