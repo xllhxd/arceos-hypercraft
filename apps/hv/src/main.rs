@@ -63,7 +63,7 @@ fn main(hart_id: usize) {
         let pcpu = PerCpu::<HyperCraftHalImpl>::this_cpu();
 
         // create vcpu, need to change addr for aarch64!
-        let gpt = setup_gpm(0x7000_0000).unwrap();  
+        let gpt = setup_gpm(0x7000_0000, 0x7020_0000).unwrap();  
         let vcpu = pcpu.create_vcpu(0).unwrap();
         let mut vcpus = VmCpus::new();
 
@@ -156,7 +156,7 @@ pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
+pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
     let mut gpt = GuestPageTable::new()?;
     let meta = MachineMeta::parse(dtb);
     /* 
@@ -211,10 +211,17 @@ pub fn setup_gpm(dtb: usize) -> Result<GuestPageTable> {
         meta.physical_memory_offset,
         meta.physical_memory_offset + meta.physical_memory_size
     );
-
+    
     gpt.map_region(
         meta.physical_memory_offset,
         meta.physical_memory_offset,
+        meta.physical_memory_size,
+        MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE | MappingFlags::USER,
+    )?;
+    
+    gpt.map_region(
+        0xffff00040080000,
+        kernel_entry,
         meta.physical_memory_size,
         MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE | MappingFlags::USER,
     )?;
