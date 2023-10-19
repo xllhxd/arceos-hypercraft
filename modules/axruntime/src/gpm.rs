@@ -63,7 +63,17 @@ impl GuestPageTableTrait for GuestPageTable {
         size: usize,
         flags: MappingFlags,
     ) -> HyperResult<()> {
-        #[cfg(any(target_arch = "riscv64", target_arch = "aarch64"))]
+        #[cfg(any(target_arch = "riscv64"))]
+        {
+            self.0
+                .map_region(VirtAddr::from(gpa), PhysAddr::from(hpa), size, flags, true)
+                .map_err(|err| {
+                    error!("paging error: {:?}", err);
+                    HyperError::Internal
+                })?;
+            Ok(())
+        }
+        #[cfg(target_arch = "aarch64")]
         {
             self.0
                 .map_region(VirtAddr::from(gpa), PhysAddr::from(hpa), size, flags, true)
