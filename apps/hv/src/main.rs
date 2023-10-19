@@ -9,7 +9,8 @@ extern crate libax;
 use dtb_riscv64::MachineMeta;
 #[cfg(target_arch = "aarch64")]
 use dtb_aarch64::MachineMeta;
-
+#[cfg(target_arch = "aarch64")]
+use aarch64_config::GUEST_KERNEL_BASE_VADDR;
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCraftHalImpl, PerCpu,
@@ -27,6 +28,8 @@ use page_table_entry::MappingFlags;
 mod dtb_riscv64;
 #[cfg(target_arch = "aarch64")]
 mod dtb_aarch64;
+#[cfg(target_arch = "aarch64")]
+mod aarch64_config;
 
 #[no_mangle]
 fn main(hart_id: usize) {
@@ -220,7 +223,7 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
     )?;
     
     gpt.map_region(
-        0xffff00040080000,
+        GUEST_KERNEL_BASE_VADDR,
         kernel_entry,
         meta.physical_memory_size,
         MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE | MappingFlags::USER,
