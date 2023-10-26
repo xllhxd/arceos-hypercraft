@@ -78,7 +78,7 @@ unsafe fn init_mmu_el2() {
     */
     
     // Set EL1 to 64bit.
-    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64 + HCR_EL2::E2H::EnableOsAtEl2);
+    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
 
     // Device-nGnRE memory
     let attr0 = MAIR_EL2::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
