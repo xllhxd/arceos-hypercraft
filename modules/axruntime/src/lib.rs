@@ -42,6 +42,7 @@ pub use gpm::GuestPageTable;
 #[cfg(feature = "hv")]
 pub use hv::HyperCraftHalImpl;
 
+
 const LOGO: &str = r#"
        d8888                            .d88888b.   .d8888b.
       d88888                           d88P" "Y88b d88P  Y88b
@@ -137,7 +138,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     info!("Logging is enabled.");
     info!("Primary CPU {} started, dtb = {:#x}.", cpu_id, dtb);
 
-    #[cfg(feature = "hv")]
+    #[cfg(all(feature = "hv", target_arch = "riscv64"))]
     hypercraft::init_hv_runtime();
 
     info!("Found physcial memory regions:");
@@ -302,6 +303,12 @@ fn init_interrupt() {
         axtask::on_timer_tick();
     });
 
+    /* 
+    #[cfg(all(feature = "hv", target_arch = "aarch64"))]
+    {
+        hv::interrupt_register_for_aarch64_hv();
+    }
+    */
     // Enable IRQs before starting app
     axhal::arch::enable_irqs();
 }

@@ -123,15 +123,32 @@ impl From<MappingFlags> for DescriptorAttr {
             attr |= Self::AP_RO;
         }
         if flags.contains(MappingFlags::USER) {
-            attr |= Self::AP_EL0 | Self::PXN;
-            if !flags.contains(MappingFlags::EXECUTE) {
-                attr |= Self::UXN;
+            #[cfg(not(feature = "hv"))] 
+            {
+                attr |= Self::AP_EL0 | Self::PXN;
+                if !flags.contains(MappingFlags::EXECUTE) {
+                    attr |= Self::UXN;
+                }
             }
+            #[cfg(feature = "hv")]
+            {
+                // 11 Read/write. 
+                // The stage 1 permissions determine the access permissions for the region.
+                attr |= Self::AP_RO | Self::AP_EL0 | Self::PXN;
+            } 
+            
         } else {
-            attr |= Self::UXN;
+            #[cfg(not(feature = "hv"))] 
+            {
+                attr |= Self::UXN;
+                if !flags.contains(MappingFlags::EXECUTE) {
+                    attr |= Self::PXN;
+                }                
+            }
+            /*attr |= Self::UXN;
             if !flags.contains(MappingFlags::EXECUTE) {
                 attr |= Self::PXN;
-            }
+            }*/
         }
         attr
     }

@@ -32,10 +32,17 @@ cfg_if::cfg_if! {
         mod config;
     } else if #[cfg(all(
         any(target_arch = "aarch64", not(target_os = "none")),
-        feature = "platform-qemu-virt-aarch64"
+        feature = "platform-qemu-virt-aarch64", not(feature = "hv")
     ))] {
         #[rustfmt::skip]
         #[path = "config_qemu_virt_aarch64.rs"]
+        mod config;
+    } else if #[cfg(all(
+        any(target_arch = "aarch64", not(target_os = "none")),
+        feature = "platform-qemu-virt-aarch64", feature = "hv"
+    ))] {
+        #[rustfmt::skip]
+        #[path = "config_qemu_virt_aarch64_hv.rs"]
         mod config;
     } else if #[cfg(all(
         any(target_arch = "aarch64", not(target_os = "none")),

@@ -3,9 +3,17 @@
 QEMU := qemu-system-$(ARCH)
 
 GUEST ?= linux
+
 ROOTFS ?= apps/hv/guest/$(GUEST)/rootfs.img
 GUEST_DTB ?= apps/hv/guest/$(GUEST)/$(GUEST).dtb
 GUEST_BIN ?= apps/hv/guest/$(GUEST)/$(GUEST).bin
+
+ifeq ($(ARCH), aarch64)
+  ROOTFS = apps/hv/guest/$(GUEST)/rootfs-aarch64.img
+  GUEST_DTB = apps/hv/guest/$(GUEST)/$(GUEST)-aarch64.dtb
+  GUEST_BIN = apps/hv/guest/$(GUEST)/$(GUEST)-aarch64.bin
+endif
+
 
 ifeq ($(BUS), mmio)
   vdev-suffix := device
@@ -30,10 +38,18 @@ qemu_args-aarch64 := \
   -kernel $(OUT_BIN)
 
 ifeq ($(HV), y)
-  qemu_args-y := \
-      -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
-    	-device loader,file=$(GUEST_DTB),addr=0x90000000,force-raw=on \
-      -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
+  ifeq ($(ARCH), riscv64)
+    qemu_args-y := \
+        -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
+    	  -device loader,file=$(GUEST_DTB),addr=0x90000000,force-raw=on \
+        -device loader,file=$(GUEST_BIN),addr=0x90200000,force-raw=on
+  else ifeq ($(ARCH), aarch64)
+    qemu_args-y := \
+        -m 3G -smp $(SMP) $(qemu_args-$(ARCH)) \
+    	  -device loader,file=$(GUEST_DTB),addr=0x70000000,force-raw=on \
+        -device loader,file=$(GUEST_BIN),addr=0x70200000,force-raw=on \
+        -machine virtualization=on,gic-version=2
+  endif
 else
   qemu_args-y := -m 128M -smp $(SMP) $(qemu_args-$(ARCH))
 endif
@@ -55,10 +71,17 @@ qemu_args-$(GRAPHIC) += \
   -serial mon:stdio
 
 ifeq ($(GUEST), linux)
-  qemu_args-$(HV) += \
-    -drive file=$(ROOTFS),format=raw,id=hd0 \
-	  -device virtio-blk-device,drive=hd0 \
-	  -append "root=/dev/vda rw console=ttyS0" 
+  ifeq ($(ARCH), riscv64)
+    qemu_args-$(HV) += \
+      -drive file=$(ROOTFS),format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0 \
+	    -append "root=/dev/vda rw console=ttyS0" 
+  else ifeq ($(ARCH), aarch64)
+    qemu_args-$(HV) += \
+      -drive if=none,file=$(ROOTFS),format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0 \
+	    -append "root=/dev/vda rw console=ttyAMA0"
+  endif
 else ifeq ($(GUEST), rCore-Tutorial)
   qemu_args-$(HV) += \
     	-drive file=guest/rCore-Tutorial-v3/fs.img,if=none,format=raw,id=x0 \

@@ -25,7 +25,7 @@ platform-raspi4-aarch64 = [
     "dep:page_table_entry", "dep:ratio",
 ]
 default = []
-hv = ["paging", "platform-qemu-virt-riscv"]
+hv = ["paging", "platform-qemu-virt-aarch64", "axconfig/hv"]
 
 [dependencies]
 log = "0.4"
@@ -45,6 +45,7 @@ percpu = { path = "../../crates/percpu" }
 memory_addr = { path = "../../crates/memory_addr" }
 handler_table = { path = "../../crates/handler_table" }
 crate_interface = { path = "../../crates/crate_interface" }
+hypercraft = { path = "../../crates/hypercraft" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"

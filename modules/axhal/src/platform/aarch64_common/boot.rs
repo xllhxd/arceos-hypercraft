@@ -5,6 +5,7 @@ use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 use axconfig::TASK_STACK_SIZE;
 
+
 #[link_section = ".bss.stack"]
 static mut BOOT_STACK: [u8; TASK_STACK_SIZE] = [0; TASK_STACK_SIZE];
 
@@ -38,7 +39,7 @@ unsafe fn switch_to_el1() {
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
         CNTVOFF_EL2.set(0);
         // Set EL1 to 64bit.
-        HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+        // HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
         // Set the return address and exception level.
         SPSR_EL2.write(
             SPSR_EL2::M::EL1h
@@ -55,6 +56,58 @@ unsafe fn switch_to_el1() {
         ELR_EL2.set(LR.get());
         asm::eret();
     }
+}
+
+unsafe fn init_mmu_el2() {
+    /* 
+    MAIR_EL2.write(
+        MAIR_EL2::Attr0_Device::nonGathering_nonReordering_noEarlyWriteAck
+            + MAIR_EL2::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL2::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL2::Attr2_Normal_Outer::NonCacheable
+            + MAIR_EL2::Attr2_Normal_Inner::NonCacheable,
+    );
+    TCR_EL2.write(
+        TCR_EL2::PS::Bits_40
+            + TCR_EL2::SH0::Inner
+            + TCR_EL2::TG0::KiB_4
+            + TCR_EL2::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL2::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL2::T0SZ.val(16),
+    );
+    */
+    
+    // Set EL1 to 64bit.
+    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+
+    // Device-nGnRE memory
+    let attr0 = MAIR_EL2::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck;
+    // Normal memory
+    let attr1 = MAIR_EL2::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+        + MAIR_EL2::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc;
+    MAIR_EL2.write(attr0 + attr1); // 0xff_04
+
+     // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
+    let tcr_flags0 = TCR_EL2::TG0::KiB_4
+        + TCR_EL2::SH0::Inner
+         + TCR_EL2::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+         + TCR_EL2::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+         + TCR_EL2::T0SZ.val(16);
+    TCR_EL2.write(TCR_EL2::PS::Bits_40 + tcr_flags0);
+    barrier::isb(barrier::SY);
+
+    let root_paddr = PhysAddr::from(BOOT_PT_L0.as_ptr() as usize).as_usize() as _;
+    TTBR0_EL2.set(root_paddr);
+    // #[macro_use]
+    // hypercraft::msr!(TTBR1_EL2, root_paddr);
+
+    // Flush the entire TLB
+    crate::arch::flush_tlb(None);
+
+    // Enable the MMU and turn on I-cache and D-cache
+    SCTLR_EL2.set(0x30c51835);
+    SCTLR_EL2.modify(SCTLR_EL2::M::Enable + SCTLR_EL2::C::Cacheable + SCTLR_EL2::I::Cacheable);
+    barrier::isb(barrier::SY);
 }
 
 unsafe fn init_mmu() {
@@ -105,6 +158,11 @@ unsafe fn init_boot_page_table() {
     crate::platform::mem::init_boot_page_table(&mut BOOT_PT_L0, &mut BOOT_PT_L1);
 }
 
+#[cfg(feature = "hv")]
+extern "C" {
+    fn exception_vector_base_el2();
+}
+
 /// The earliest entry point for the primary CPU.
 #[naked]
 #[no_mangle]
@@ -112,6 +170,8 @@ unsafe fn init_boot_page_table() {
 unsafe extern "C" fn _start() -> ! {
     // PC = 0x8_0000
     // X0 = dtb
+    
+    #[cfg(not(feature = "hv"))]
     core::arch::asm!("
         mrs     x19, mpidr_el1
         and     x19, x19, #0xffffff     // get current CPU id
@@ -125,7 +185,7 @@ unsafe extern "C" fn _start() -> ! {
         bl      {init_boot_page_table}
         bl      {init_mmu}              // setup MMU
         bl      {enable_fp}             // enable fp/neon
-
+        
         mov     x8, {phys_virt_offset}  // set SP to the high address
         add     sp, sp, x8
 
@@ -143,7 +203,47 @@ unsafe extern "C" fn _start() -> ! {
         phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,
         entry = sym crate::platform::rust_entry,
         options(noreturn),
-    )
+    );
+
+    // set vbar_el2 for hypervisor.
+    #[cfg(feature = "hv")]
+    core::arch::asm!("
+        ldr x8, ={exception_vector_base_el2}    // setup vbar_el2 for hypervisor
+        msr vbar_el2, x8
+        
+        mrs     x19, mpidr_el1
+        and     x19, x19, #0xffffff     // get current CPU id
+        mov     x20, x0                 // save DTB pointer
+        adrp    x8, {boot_stack}        // setup boot stack
+        add     x8, x8, {boot_stack_size}
+        mov     sp, x8
+
+        bl      {init_boot_page_table}
+        bl      {init_mmu_el2}
+        bl      {init_mmu}              // setup MMU
+        bl      {switch_to_el1}         // switch to EL1
+        bl      {enable_fp}             // enable fp/neon
+
+        mov     x8, {phys_virt_offset}  // set SP to the high address
+        add     sp, sp, x8
+
+        mov     x0, x19                 // call rust_entry(cpu_id, dtb)
+        mov     x1, x20
+        ldr     x8, ={entry}
+        blr     x8
+        b      .",
+        exception_vector_base_el2 = sym exception_vector_base_el2,
+        init_boot_page_table = sym init_boot_page_table,
+        init_mmu_el2 = sym init_mmu_el2,
+        switch_to_el1 = sym switch_to_el1,
+        init_mmu = sym init_mmu,
+        enable_fp = sym enable_fp,
+        boot_stack = sym BOOT_STACK,
+        boot_stack_size = const TASK_STACK_SIZE,
+        phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,
+        entry = sym crate::platform::rust_entry,
+        options(noreturn),
+    );
 }
 
 /// The earliest entry point for the secondary CPUs.
