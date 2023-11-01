@@ -1,4 +1,3 @@
-//! x86 page table entries on 64-bit paging.
 
 use core::fmt;
 use memory_addr::PhysAddr;

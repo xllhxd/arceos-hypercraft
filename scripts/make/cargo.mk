@@ -15,8 +15,11 @@ endif
 features-$(FS) += libax/fs
 features-$(NET) += libax/net
 features-$(GRAPHIC) += libax/display
-features-$(HV) += libax/hv
+features-$(HV) += libax/hv 
 
+ifeq ($(ARCH), x86_64)
+  features-$(HV) += libax/irq
+endif
 
 ifeq ($(BUS),pci)
   features-y += libax/bus-pci
@@ -57,9 +60,11 @@ endif
 rustc_flags := -Clink-args="-T$(LD_SCRIPT) -no-pie"
 # rustc_flags := -Clink-args="-T$(LD_SCRIPT)" -C relocation-model=static
 
-# ifeq ($(HV), y)
-#   rustc_flags += -Ctarget-feature=+h
-# endif 
+ifeq ($(HV), y)
+  ifeq ($(ARCH), riscv64)
+    rustc_flags += -Ctarget-feature=+h
+  endif
+endif 
 
 define cargo_build
   cargo rustc $(build_args) $(1) -- $(rustc_flags)

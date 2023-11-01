@@ -25,6 +25,9 @@ default = ["axtask?/default"]
 hv = ["alloc", "dep:hypercraft", "axhal/hv", "dep:page_table", "dep:page_table_entry"]
 
 [dependencies]
+spin = "0.9"
+bitflags = "1.3"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 percpu = { path = "../../crates/percpu" }
 kernel_guard = { path = "../../crates/kernel_guard" }
 spinlock = { path = "../../crates/spinlock" }
@@ -42,3 +45,9 @@ axtask = { path = "../axtask", default-features = false, optional = true }
 hypercraft = { path = "../../crates/hypercraft", optional = true }
 page_table = { path = "../../crates/page_table", optional = true }
 page_table_entry = { path = "../../crates/page_table_entry", features = ["hv"], optional = true }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+x86 = "0.52"
+x86_64 = "0.14"
+x2apic = "0.4"
+raw-cpuid = "11.0"

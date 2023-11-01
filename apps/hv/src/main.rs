@@ -11,6 +11,7 @@ use dtb_riscv64::MachineMeta;
 use dtb_aarch64::MachineMeta;
 #[cfg(target_arch = "aarch64")]
 use aarch64_config::GUEST_KERNEL_BASE_VADDR;
+#[cfg(target_arch = "aarch64")]
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCraftHalImpl, PerCpu,
@@ -18,10 +19,15 @@ use libax::{
     },
     info,
 };
-#[cfg(target_arch = "riscv64")]
+#[cfg(not(target_arch = "aarch64"))]
 use libax::{
-    hv::{HyperCallMsg,VmExitInfo}
+    hv::{
+        self, GuestPageTable, GuestPageTableTrait, HyperCallMsg, HyperCraftHalImpl, PerCpu, Result,
+        VCpu, VmCpus, VmExitInfo, VM, phys_to_virt,
+    },
+    info,
 };
+
 use page_table_entry::MappingFlags;
 
 #[cfg(target_arch = "riscv64")]
@@ -30,6 +36,9 @@ mod dtb_riscv64;
 mod dtb_aarch64;
 #[cfg(target_arch = "aarch64")]
 mod aarch64_config;
+
+#[cfg(target_arch = "x86_64")]
+mod x64;
 
 #[no_mangle]
 fn main(hart_id: usize) {
@@ -80,6 +89,27 @@ fn main(hart_id: usize) {
         vm.run(0);
     }
     #[cfg(target_arch = "x86_64")]
+    {
+        println!("into main {}", hart_id);
+
+        let mut p = PerCpu::<HyperCraftHalImpl>::new(hart_id);
+        p.hardware_enable().unwrap();
+
+        let gpm = x64::setup_gpm().unwrap();
+        info!("{:#x?}", gpm);
+
+        let mut vcpu = p
+            .create_vcpu(x64::BIOS_ENTRY, gpm.nest_page_table_root())
+            .unwrap();
+
+        println!("Running guest...");
+        vcpu.run();
+
+        p.hardware_disable().unwrap();
+
+        return;
+    }
+    #[cfg(not(any(target_arch = "riscv64", target_arch = "x86_64", target_arch = "aarch64")))]
     {
         panic!("Other arch is not supported yet!")
     }

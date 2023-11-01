@@ -15,6 +15,8 @@ memory_addr = { path = "../memory_addr" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.14"
+numeric-enum-macro = "0.2"
+bit_field = "0.10"
 
 [features]
 hv = []
