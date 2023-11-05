@@ -68,8 +68,6 @@ git submodule update --init --recursive
 ```
 
 **Build NimbOS BIOS**  
-Download [nimbos image](https://drive.google.com/file/d/1Q3yNmpnh3pamrhHGZV_uz6wUFGklidGk/view?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`: 
-
 ```
 # build nimbos bios
 cd apps/hv/guest/nimbos/bios
