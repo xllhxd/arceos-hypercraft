@@ -220,6 +220,23 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
         )?;
     }
 
+    if let Some(pl031) = meta.pl031 {
+        gpt.map_region(
+            pl031.base_address,
+            pl031.base_address,
+            pl031.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
+
+    if let Some(pl061) = meta.pl061 {
+        gpt.map_region(
+            pl061.base_address,
+            pl061.base_address,
+            pl061.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
 
     for intc in meta.intc.iter() {
         gpt.map_region(
