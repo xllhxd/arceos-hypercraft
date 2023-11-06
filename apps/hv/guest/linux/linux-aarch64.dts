@@ -12,12 +12,12 @@
 		cpu_on = <0xc4000003>;
 		cpu_off = <0x84000002>;
 		cpu_suspend = <0xc4000001>;
-		method = "hvc";
+		method = "smc";
 		compatible = "arm,psci-1.0\0arm,psci-0.2\0arm,psci";
 	};
 
 	memory@40000000 {
-		reg = <0x00 0x40000000 0x00 0x80000000>;
+		reg = <0x00 0x70000000 0x00 0xc000000>;
 		device_type = "memory";
 	};
 
@@ -381,11 +381,11 @@
 	};
 
 	chosen {
-		linux,initrd-end = <0x4811d0dc>;
-		linux,initrd-start = <0x48000000>;
-		bootargs = "console=ttyAMA0";
+		linux,initrd-end = <0x7812046a>;
+		linux,initrd-start = <0x78000000>;
+		bootargs = "root=/dev/vda rootfstype=ext4 rw console=ttyAMA0";
 		stdout-path = "/pl011@9000000";
-		rng-seed = <0x11011ea3 0x81766398 0x2d3e235f 0xd849af94 0x7be1598d 0x88cc0be8 0xbb33bb88 0xfbac2a42>;
-		kaslr-seed = <0xda601ac9 0x801b8372>;
+		rng-seed = <0x2042ef85 0x7359a362 0xa80384fa 0x494effd2 0xd1e13e05 0xb6fae544 0xd3a19513 0x1cebc2c8>;
+		kaslr-seed = <0x9cdbc23d 0x3256a986>;
 	};
 };

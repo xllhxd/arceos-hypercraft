@@ -15,6 +15,8 @@ pub struct MachineMeta {
     pub virtio: ArrayVec<Device, 32>,
 
     pub pl011: Option<Device>,
+    pub pl031: Option<Device>,
+    pub pl061: Option<Device>,
 
     pub intc: ArrayVec<Device, 2>,
 
@@ -56,7 +58,28 @@ impl MachineMeta {
                 });
             }
         }
-
+        for node in fdt.find_all_nodes("/pl031") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                libax::debug!("pl011 addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.pl031 = Some(Device {
+                    base_address: base_addr,
+                    size,
+                });
+            }
+        }
+        for node in fdt.find_all_nodes("/pl061") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                libax::debug!("pl011 addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.pl061 = Some(Device {
+                    base_address: base_addr,
+                    size,
+                });
+            }
+        }
         // probe intc(gicc, gicd)
         for node in fdt.find_all_nodes("/intc") {
             let regions = node.reg().unwrap();
