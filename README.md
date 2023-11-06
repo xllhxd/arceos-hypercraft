@@ -45,13 +45,16 @@ git submodule update --init --recursive
 ```
 
 **Download NimbOS Image**  
-Download nimbos-aarch64.bin in [nimbos](https://drive.google.com/drive/folders/1Hfn6RI0GsNxoAmMQ1Gj1kZdcm_NkhRP0?usp=sharing) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`: 
+Download **nimbos-aarch64.bin** from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`: 
 
 **Build & Run**
 ```
 # build & run
 make ARCH=aarch64 A=apps/hv HV=y LOG=info GUEST=nimbos run
 ```
+
+### aarch64 linux
+todo()
 
 ### x86_64 nimbos
 **Clone project**
@@ -76,7 +79,7 @@ cp out/rvm-bios.bin ..
 ```
 
 **Download NimbOS Image**  
-Download nimbos-x86.bin from [here](https://drive.google.com/drive/folders/1Hfn6RI0GsNxoAmMQ1Gj1kZdcm_NkhRP0?usp=sharing) to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos` and rename it to `nimbos.bin`: 
+Download **nimbos-x86.bin** from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos` and rename it to `nimbos.bin`: 
 
 **Build & Run**
 ```
