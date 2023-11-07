@@ -32,7 +32,7 @@ make ARCH=riscv64 A=apps/hv HV=y LOG=info run
 ### aarch64 nimbos
 
 **Download NimbOS Image**  
-Download nimbos-aarch64.bin file from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`.
+Download `nimbos-aarch64.bin` file from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`.
 
 **Build & Run**
 ```
@@ -42,7 +42,7 @@ make ARCH=aarch64 A=apps/hv HV=y LOG=info GUEST=nimbos run
 
 ### aarch64 linux
 **Download Linux Image**  
-Download linux-aarch64.bin file from image&rootfs/linux/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/linux`. \
+Download `linux-aarch64.bin` and `rootfs-aarch64.img` file from image&rootfs/linux/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/linux`. \
 <span style="color: lightgray;">(You can also run a smaller trimmed Linux image file, linux-aarch64-trimmed.bin, located in the image&rootfs/linux/ directory. You need to rename it to linux-aarch64.bin by command "mv linux-aarch64-trimmed.bin linux-aarch64.bin")</span>
 
 **Build & Run**
@@ -62,7 +62,7 @@ cp out/rvm-bios.bin ..
 ```
 
 **Download NimbOS Image**  
-Download nimbos-x86.bin file from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos` and rename it to `nimbos.bin`.
+Download `nimbos-x86.bin` file from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos` and rename it to `nimbos.bin`.
 
 **Build & Run**
 ```
