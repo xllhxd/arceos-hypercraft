@@ -3,7 +3,7 @@
 
 ## Build & Run
 
-### Linux
+### Riscv Linux
 **Clone project**
 ```
 # create workspace
@@ -11,7 +11,8 @@ mkdir $(WORKSPACE)
 cd $(WORKSPACE)
 
 # clone project
-git clone https://github.com/KuangjuX/arceos.git
+git clone https://github.com/arceos-hypervisor/arceos.git
+cd arceos
 git checkout hypervisor
 git submodule update --init --recursive
 ```
@@ -26,8 +27,64 @@ Download disk file from Baidu Cloud Disk to `$(WORKSPACE)/guest/linux`:
 **Build & Run**
 ```
 # build & run
+make ARCH=riscv64 A=apps/hv HV=y LOG=info run
+```
+
+### aarch64 nimbos
+**Clone project**
+```
+# create workspace
+mkdir $(WORKSPACE)
+cd $(WORKSPACE)
+
+# clone project
+git clone https://github.com/arceos-hypervisor/arceos.git
 cd arceos
-make ARCH=riscv64 A=apps/hv HY=y LOG=info run
+git checkout hypervisor
+git submodule update --init --recursive
+```
+
+**Download NimbOS Image**  
+Download **nimbos-aarch64.bin** from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) from Google Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos`: 
+
+**Build & Run**
+```
+# build & run
+make ARCH=aarch64 A=apps/hv HV=y LOG=info GUEST=nimbos run
+```
+
+### aarch64 linux
+todo()
+
+### x86_64 nimbos
+**Clone project**
+```
+# create workspace
+mkdir $(WORKSPACE)
+cd $(WORKSPACE)
+
+# clone project
+git clone https://github.com/arceos-hypervisor/arceos.git
+cd arceos
+git checkout hypervisor
+git submodule update --init --recursive
+```
+
+**Build NimbOS BIOS**  
+```
+# build nimbos bios
+cd apps/hv/guest/nimbos/bios
+make
+cp out/rvm-bios.bin ..
+```
+
+**Download NimbOS Image**  
+Download **nimbos-x86.bin** from image&rootfs/nimbos/ in [image&rootfs](https://drive.google.com/drive/folders/1YXffW-kQntLLgaEU9kZmmUNquLe80Awl?usp=drive_link) to `$(WORKSPACE)/arceos/apps/hv/guest/nimbos` and rename it to `nimbos.bin`: 
+
+**Build & Run**
+```
+# build & run
+make ARCH=x86_64 A=apps/hv HV=y LOG=info GUEST=nimbos run
 ```
 
 ## RoadMap
