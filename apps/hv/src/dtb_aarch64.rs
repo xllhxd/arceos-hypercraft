@@ -18,9 +18,11 @@ pub struct MachineMeta {
     pub pl031: Option<Device>,
     pub pl061: Option<Device>,
 
-    pub intc: ArrayVec<Device, 2>,
+    pub intc: ArrayVec<Device, 3>,
 
     pub pcie: Option<Device>,
+
+    pub flash: ArrayVec<Device, 2>,
 }
 
 impl MachineMeta {
@@ -62,7 +64,7 @@ impl MachineMeta {
             if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
                 let base_addr = reg.starting_address as usize;
                 let size = reg.size.unwrap();
-                libax::debug!("pl011 addr: {:#x}, size: {:#x}", base_addr, size);
+                libax::debug!("pl031 addr: {:#x}, size: {:#x}", base_addr, size);
                 meta.pl031 = Some(Device {
                     base_address: base_addr,
                     size,
@@ -73,14 +75,14 @@ impl MachineMeta {
             if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
                 let base_addr = reg.starting_address as usize;
                 let size = reg.size.unwrap();
-                libax::debug!("pl011 addr: {:#x}, size: {:#x}", base_addr, size);
+                libax::debug!("pl061 addr: {:#x}, size: {:#x}", base_addr, size);
                 meta.pl061 = Some(Device {
                     base_address: base_addr,
                     size,
                 });
             }
         }
-        // probe intc(gicc, gicd)
+        // probe intc(gicc, gicd, gich)
         for node in fdt.find_all_nodes("/intc") {
             let regions = node.reg().unwrap();
             for region in regions {
@@ -93,6 +95,19 @@ impl MachineMeta {
                 })
             }
         }
+        for node in fdt.find_all_nodes("/intc/v2m") {
+            let regions = node.reg().unwrap();
+            for region in regions {
+                let paddr = region. starting_address as usize;
+                let size = region.size.unwrap();
+                debug!("intc addr: {:#x}, size: {:#x}", paddr, size);
+                meta.intc.push(Device {
+                    base_address: paddr,
+                    size,
+                })
+            }
+        }
+
         meta.intc.sort_unstable_by_key(|v| v.base_address);
 
         for node in fdt.find_all_nodes("/pcie") {
@@ -104,6 +119,19 @@ impl MachineMeta {
                     base_address: base_addr,
                     size,
                 });
+            }
+        }
+
+        for node in fdt.find_all_nodes("/flash") {
+            let regions = node.reg().unwrap();
+            for region in regions {
+                let paddr = region. starting_address as usize;
+                let size = region.size.unwrap();
+                debug!("flash addr: {:#x}, size: {:#x}", paddr, size);
+                meta.flash.push(Device {
+                    base_address: paddr,
+                    size,
+                })
             }
         }
 

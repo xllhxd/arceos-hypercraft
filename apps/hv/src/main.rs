@@ -256,6 +256,15 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
         )?;
     }
 
+    for flash in meta.flash.iter() {
+        gpt.map_region(
+            flash.base_address,
+            flash.base_address,
+            flash.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
+
     info!(
         "physical memory: [{:#x}: {:#x})",
         meta.physical_memory_offset,
@@ -276,5 +285,8 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
         MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE | MappingFlags::USER,
     )?;
 
+    let gaddr:usize = 0x40_1000_0000;
+    let paddr = gpt.translate(gaddr).unwrap();
+    debug!("this is paddr for 0x{:X}: 0x{:X}", gaddr, paddr);
     Ok(gpt)
 }
