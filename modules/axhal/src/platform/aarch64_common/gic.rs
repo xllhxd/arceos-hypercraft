@@ -1,8 +1,10 @@
 use crate::{irq::IrqHandler, mem::phys_to_virt};
 use arm_gic::gic_v2::{GicCpuInterface, GicDistributor, GicHypervisorInterface};
-use hypercraft::arch;
 use memory_addr::PhysAddr;
 use spinlock::SpinNoIrq;
+
+#[cfg(feature = "hv")]
+use hypercraft::arch;
 
 /// The maximum number of IRQs.
 pub const MAX_IRQ_COUNT: usize = 1024;
@@ -21,6 +23,7 @@ pub const MAINTENANCE_IRQ_NUM: usize = 25;
 
 const GICD_BASE: PhysAddr = PhysAddr::from(axconfig::GICD_PADDR);
 const GICC_BASE: PhysAddr = PhysAddr::from(axconfig::GICC_PADDR);
+#[cfg(feature = "hv")]
 const GICH_BASE: PhysAddr = PhysAddr::from(axconfig::GICH_PADDR);
 
 pub static GICD: SpinNoIrq<GicDistributor> =
@@ -29,6 +32,7 @@ pub static GICD: SpinNoIrq<GicDistributor> =
 // per-CPU, no lock
 pub static GICC: GicCpuInterface = GicCpuInterface::new(phys_to_virt(GICC_BASE).as_mut_ptr());
 
+#[cfg(feature = "hv")]
 pub static GICH: GicHypervisorInterface = GicHypervisorInterface::new(phys_to_virt(GICH_BASE).as_mut_ptr());
 
 /// Enables or disables the given IRQ.

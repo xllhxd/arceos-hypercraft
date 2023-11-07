@@ -92,7 +92,7 @@ ifeq ($(GUEST), linux)
     qemu_args-$(HV) += \
       -drive if=none,file=$(ROOTFS),format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0 \
-	    -append "root=/dev/vda rw console=ttyAMA0"
+	    # -append "root=/dev/vda rw console=ttyAMA0"
   else ifeq ($(ARCH), x86_64)
     qemu_args-$(HV) += \
       -drive file=$(ROOTFS),format=raw,id=hd0 \

@@ -220,6 +220,23 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
         )?;
     }
 
+    if let Some(pl031) = meta.pl031 {
+        gpt.map_region(
+            pl031.base_address,
+            pl031.base_address,
+            pl031.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
+
+    if let Some(pl061) = meta.pl061 {
+        gpt.map_region(
+            pl061.base_address,
+            pl061.base_address,
+            pl061.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
 
     for intc in meta.intc.iter() {
         gpt.map_region(
@@ -235,6 +252,15 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
             pcie.base_address,
             pcie.base_address,
             pcie.size,
+            MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
+        )?;
+    }
+
+    for flash in meta.flash.iter() {
+        gpt.map_region(
+            flash.base_address,
+            flash.base_address,
+            flash.size,
             MappingFlags::READ | MappingFlags::WRITE | MappingFlags::USER,
         )?;
     }
@@ -259,5 +285,8 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
         MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE | MappingFlags::USER,
     )?;
 
+    let gaddr:usize = 0x40_1000_0000;
+    let paddr = gpt.translate(gaddr).unwrap();
+    debug!("this is paddr for 0x{:X}: 0x{:X}", gaddr, paddr);
     Ok(gpt)
 }
