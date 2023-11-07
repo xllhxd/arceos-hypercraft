@@ -28,6 +28,8 @@ pub fn data_abort_handler(ctx: &mut ContextFrame) {
         reg_width: exception_data_abort_access_reg_width(),
     };
     */
+    info!("data fault addr 0x{:x}\n",
+        exception_fault_addr());
     let elr = ctx.exception_pc();
 
     if !exception_data_abort_handleable() {
@@ -79,7 +81,7 @@ pub fn hvc_handler(ctx: &mut ContextFrame) {
     let x5 = ctx.gpr(5);
     let x6 = ctx.gpr(6);
     let mode = ctx.gpr(7);
-
+    debug!("hvc_handler: mode:{}", mode);
     let hvc_type = (mode >> 8) & 0xff;
     let event = mode & 0xff;
 
