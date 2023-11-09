@@ -18,7 +18,7 @@ git submodule update --init --recursive
 ### Riscv Linux
 **Download Disk File & Linux Binary**  
 
-Download disk file from Baidu Cloud Disk to `$(WORKSPACE)/guest/linux`:
+Download disk file from Baidu Cloud Disk to `$(WORKSPACE)/arceos/apps/hv/guest/linux`:
 
 链接: https://pan.baidu.com/s/1OGuOjMe0VEFvDhPg3nzSjA?pwd=5ewv 提取码: 5ewv 复制这段内容后打开百度网盘手机App，操作更方便哦 
 --来自百度网盘超级会员v2的分享
