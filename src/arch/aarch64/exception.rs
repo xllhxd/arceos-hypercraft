@@ -164,7 +164,7 @@ pub fn exception_data_abort_access_is_sign_ext() -> bool {
 /// deal with lower aarch64 synchronous exception
 #[no_mangle]
 pub extern "C" fn lower_aarch64_synchronous(ctx: &mut ContextFrame) {
-    info!("lower_aarch64_synchronous exception class:0x{:X}", exception_class());
+    debug!("lower_aarch64_synchronous exception class:0x{:X}", exception_class());
     // current_cpu().set_context_addr(ctx);
 
     match exception_class() {

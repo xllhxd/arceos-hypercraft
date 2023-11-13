@@ -28,8 +28,8 @@ pub fn data_abort_handler(ctx: &mut ContextFrame) {
         reg_width: exception_data_abort_access_reg_width(),
     };
     */
-    debug!("data fault addr 0x{:x}\n",
-        exception_fault_addr());
+    debug!("data fault addr 0x{:x}, esr: 0x{:x}",
+        exception_fault_addr(), exception_esr());
     let elr = ctx.exception_pc();
 
     if !exception_data_abort_handleable() {
