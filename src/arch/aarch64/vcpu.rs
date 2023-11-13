@@ -89,10 +89,10 @@ impl <H:HyperCraftHal> VCpu<H> {
     }
 
     /// Run this vcpu
-    pub fn run(&self, vttbr_token: usize) -> ! {
-        loop {  // because of elr_el2, it will not return to this?
+    pub fn run(&self, vttbr_token: usize) {
+        // loop {  // because of elr_el2, it will not return to this?
             _ = run_guest_by_trap2el2(vttbr_token, self.vcpu_ctx_addr());
-        }
+        // }
     }
     
     /// Get vcpu whole context address
@@ -126,13 +126,13 @@ impl <H:HyperCraftHal> VCpu<H> {
         self.regs.vm_system_regs.cntkctl_el1 = 0;
         self.regs.vm_system_regs.pmcr_el0 = 0;
         // self.regs.vm_system_regs.vtcr_el2 = 0x8001355c;
-        self.regs.vm_system_regs.vtcr_el2 = (VTCR_EL2::PS::PA_36B_64GB   //0b001 36 bits, 64GB.
+        self.regs.vm_system_regs.vtcr_el2 = (VTCR_EL2::PS::PA_40B_1TB   //0b001 36 bits, 64GB.
                                           + VTCR_EL2::TG0::Granule4KB
                                           + VTCR_EL2::SH0::Inner
                                           + VTCR_EL2::ORGN0::NormalWBRAWA
                                           + VTCR_EL2::IRGN0::NormalWBRAWA
                                           + VTCR_EL2::SL0.val(0b01)
-                                          + VTCR_EL2::T0SZ.val(64 - 36)).into();
+                                          + VTCR_EL2::T0SZ.val(64 - 40)).into();
         //self.regs.vm_system_regs.hcr_el2 = 0x80000001;  // Maybe we do not need smc setting? passthrough gic.
         self.regs.vm_system_regs.hcr_el2 = (HCR_EL2::VM::Enable
                                          + HCR_EL2::RW::EL1IsAarch64).into();
