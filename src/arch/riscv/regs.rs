@@ -109,6 +109,7 @@ impl GeneralPurposeRegisters {
 
     /// Returns the arguments register as a mutable.
     pub fn a_regs_mut(&mut self) -> &mut [usize] {
+        info!("{:?}", &self.0[GprIndex::A0 as usize..=GprIndex::A7 as usize]);
         &mut self.0[GprIndex::A0 as usize..=GprIndex::A7 as usize]
     }
 }

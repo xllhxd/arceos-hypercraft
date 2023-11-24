@@ -26,7 +26,8 @@ extern crate alloc;
 mod arch;
 #[cfg(target_arch = "riscv64")]
 #[path = "arch/riscv/mod.rs"]
-mod arch;
+/// mod
+pub mod arch;
 #[cfg(target_arch = "x86_64")]
 #[path = "arch/x86_64/mod.rs"]
 mod arch;

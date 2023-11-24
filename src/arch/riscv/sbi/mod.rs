@@ -3,6 +3,7 @@ mod dbcn;
 mod pmu;
 mod rfnc;
 mod srst;
+mod hsm;
 
 use crate::{HyperError, HyperResult};
 pub use base::BaseFunction;
@@ -11,6 +12,7 @@ pub use pmu::PmuFunction;
 pub use rfnc::RemoteFenceFunction;
 use sbi_spec;
 pub use srst::ResetFunction;
+pub use hsm::HartStateManagementFunction;
 
 pub const SBI_SUCCESS: usize = 0;
 pub const SBI_ERR_FAILUER: isize = -1;
@@ -58,6 +60,8 @@ pub enum SbiMessage {
     RemoteFence(RemoteFenceFunction),
     /// The PMU Extension
     PMU(PmuFunction),
+    /// HSM Extension
+    Hsm(HartStateManagementFunction),
 }
 
 impl SbiMessage {
@@ -76,6 +80,7 @@ impl SbiMessage {
                 RemoteFenceFunction::from_args(args).map(SbiMessage::RemoteFence)
             }
             sbi_spec::pmu::EID_PMU => PmuFunction::from_regs(args).map(SbiMessage::PMU),
+            sbi_spec::hsm::EID_HSM => HartStateManagementFunction::from_regs(args).map(SbiMessage::Hsm),
             _ => {
                 error!("args: {:?}", args);
                 error!("args[7]: {:#x}", args[7]);

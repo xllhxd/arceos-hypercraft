@@ -4,11 +4,11 @@ use super::{
     devices::plic::{PlicState, MAX_CONTEXTS},
     regs::GeneralPurposeRegisters,
     sbi::PmuFunction,
-    sbi::{BaseFunction, RemoteFenceFunction},
+    sbi::{BaseFunction, RemoteFenceFunction, HartStateManagementFunction},
     traps,
     vcpu::{self, VmCpuRegisters},
     vm_pages::VmPages,
-    HyperCallMsg, RiscvCsrTrait, CSR,
+    HyperCallMsg, RiscvCsrTrait, CSR, // HyperCallMsg = SbiMessage
 };
 use crate::{
     arch::sbi::SBI_ERR_NOT_SUPPORTED, vcpus::VM_CPUS_MAX, GprIndex, GuestPageTableTrait,
@@ -45,15 +45,16 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
     #[allow(unused_variables, deprecated)]
     /// Run the host VM's vCPU with ID `vcpu_id`. Does not return.
     pub fn run(&mut self, vcpu_id: usize) {
-        let mut vm_exit_info: VmExitInfo;
+        let mut vm_exit_info: VmExitInfo; // maybe i should also add some VmExitInfo
         let mut gprs = GeneralPurposeRegisters::default();
         loop {
             let mut len = 4;
             let mut advance_pc = false;
-            {
+            {   // run from a new vcpu here? if so i need to get a new vcpu_id
                 let vcpu = self.vcpus.get_vcpu(vcpu_id).unwrap();
-                vm_exit_info = vcpu.run();
-                vcpu.save_gprs(&mut gprs);
+                vm_exit_info = vcpu.run(); // what the run does
+                vcpu.save_gprs(&mut gprs); // Save vCPU registers to the guest's GPRs
+                                           //  why use mut here?
             }
 
             match vm_exit_info {
@@ -89,7 +90,10 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
                             HyperCallMsg::PMU(pmu) => {
                                 self.handle_pmu_function(pmu, &mut gprs).unwrap();
                             }
-                            _ => todo!(),
+                            HyperCallMsg::Hsm(hsm) => {
+                                self.handle_hsm_function(hsm, &mut gprs).unwrap();
+                            }
+                            _ => todo!()
                         }
                         advance_pc = true;
                     } else {
@@ -311,6 +315,37 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
                 );
                 gprs.set_reg(GprIndex::A0, sbi_ret.error);
                 gprs.set_reg(GprIndex::A1, sbi_ret.value);
+            }
+        }
+        Ok(())
+    }
+    
+    fn handle_hsm_function(
+        &self,
+        hsm: HartStateManagementFunction,
+        gprs: &mut GeneralPurposeRegisters,
+    ) -> HyperResult<()> {
+        gprs.set_reg(GprIndex::A0, 0);
+        match hsm {
+            HartStateManagementFunction::HartStart {
+                hartid,
+                start_addr,
+                opaque,
+            } => {
+                let sbi_ret = sbi_rt::hart_start(hartid, start_addr, opaque);
+                gprs.set_reg(GprIndex::A0, sbi_ret.error);
+            }
+            HartStateManagementFunction::HartStop { hartid: _ } => {
+                let sbi_ret = sbi_rt::hart_stop();
+                gprs.set_reg(GprIndex::A0, sbi_ret.error);
+            }
+            HartStateManagementFunction::GetHartStatus { hartid } => {
+                let sbi_ret = sbi_rt::hart_get_status(hartid) ;
+                gprs.set_reg(GprIndex::A0, sbi_ret.error);
+            }
+            HartStateManagementFunction::HartSuspend { hartid: _, suspend_type, resume_addr, opaque } => {
+                let sbi_ret = sbi_rt::hart_suspend(suspend_type as u32, resume_addr, opaque);
+                gprs.set_reg(GprIndex::A0, sbi_ret.error);
             }
         }
         Ok(())

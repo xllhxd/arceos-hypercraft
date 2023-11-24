@@ -11,6 +11,10 @@ use crate::{
 
 use super::detect::detect_h_extension;
 
+use crate::arch::devices::cpu::{CpuInfo, MAX_CPUS_COUNT};
+use fdt::Fdt;
+use arrayvec::ArrayVec;
+
 /// Per-CPU data. A pointer to this struct is loaded into TP when a CPU starts. This structure
 /// sits at the top of a secondary CPU's stack.
 #[repr(C)]
@@ -30,7 +34,8 @@ impl<H: HyperCraftHal> PerCpu<H> {
     /// area is initialized and loaded into TP as well.
     pub fn init(boot_hart_id: usize, stack_size: usize) -> HyperResult<()> {
         // TODO: get cpu info by device tree
-        let cpu_nums: usize = 1;
+        let cpu_info = CpuInfo::get();
+        let cpu_nums = cpu_info.num_cpus();
         let pcpu_size = core::mem::size_of::<PerCpu<H>>() * cpu_nums;
         debug!("pcpu_size: {:#x}", pcpu_size);
         let pcpu_pages = H::alloc_pages((pcpu_size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K)
@@ -118,31 +123,15 @@ impl<H: HyperCraftHal> PerCpu<H> {
 }
 
 // PerCpu state obvioudly cannot be shared between threads.
-impl<H: HyperCraftHal> !Sync for PerCpu<H> {}
+// impl<H: HyperCraftHal> !Sync for PerCpu<H> {}
 
-// /// Boots secondary CPUs, using the HSM SBI call. Upon return, all secondary CPUs will have
-// /// entered secondary_init().
-// /// TODO: remove this function, use `percpu` instead.
-// pub fn start_secondary_cpus<H: HyperCraftHal + 'static>(cpu_info: &CpuInfo) -> HyperResult<()> {
-//     // TODO: remove _secondary_start
-//     extern "C" {
-//         fn _secondary_start();
-//     }
-//     let boot_cpu = PerCpu::<H>::this_cpu();
-//     for i in 0..cpu_info.num_cpus() {
-//         if i == boot_cpu.cpu_id {
+// pub fn start_secondary_cpus() -> Result<(), Error> {
+//     let cpu_info = CpuInfo::get();
+//     let boot_hart_id = PerCpu::this_cpu().cpu_id;
+//     for i in cpu_info.hart_ids {
+//         let hart_id = i;
+//         if hart_id = boot_hart_id {
 //             continue;
 //         }
-
-//         // Start the hart with its stack physical address in A1.
-//         // Safe since it is set up to point to a valid PerCpu struct in init().
-//         let pcpu = unsafe { PerCpu::<H>::ptr_for_cpu(i).as_ref().unwrap() };
-//         let stack_top_addr = pcpu.stack_top_addr();
-
-//         // hsm call to start other hart
-//         // a0: hartid
-//         // a1: stack_top_addr
-//         sbi_rt::hart_start(i, _secondary_start as usize, stack_top_addr);
 //     }
-//     Ok(())
 // }

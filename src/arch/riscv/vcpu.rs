@@ -257,6 +257,7 @@ impl<H: HyperCraftHal> VCpu<H> {
     pub fn init_page_map(&mut self, token: usize) {
         // Set hgatp
         // TODO: Sv39 currently, but should be configurable
+        // do i need to change here?
         self.regs.virtual_hs_csrs.hgatp = token;
         unsafe {
             core::arch::asm!(

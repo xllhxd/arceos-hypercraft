@@ -7,16 +7,19 @@ use crate::{
 /// have one M-mode context and one S-mode context.
 pub const MAX_CONTEXTS: usize = 2 * MAX_CPUS;
 
+/// plicstate
 pub struct PlicState {
     base: usize,
     source_priority: [u32; 512],
     pending: [u32; 16],
     enable: [[u32; 32]; MAX_CONTEXTS],
     thresholds: [u32; MAX_CONTEXTS],
+    /// function
     pub claim_complete: [u32; MAX_CONTEXTS],
 }
-
+/// impl
 impl PlicState {
+    /// function
     pub fn new(base: usize) -> Self {
         Self {
             base,
@@ -27,11 +30,12 @@ impl PlicState {
             claim_complete: [0; MAX_CONTEXTS],
         }
     }
-
+    /// function
     pub fn base(&self) -> usize {
         self.base
     }
 
+    /// function
     pub fn read_u32(&mut self, addr: usize) -> u32 {
         let offset = addr.wrapping_sub(self.base);
         if (0x20_0000..0x20_0000 + 0x1000 * MAX_CONTEXTS).contains(&offset) {
@@ -46,7 +50,7 @@ impl PlicState {
         }
         todo!()
     }
-
+    /// function
     pub fn write_u32(&mut self, addr: usize, val: u32) {
         // debug!("PLIC write@{:#x} -> {:#x}", addr, val);
         let offset = addr.wrapping_sub(self.base);

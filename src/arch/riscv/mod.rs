@@ -1,6 +1,6 @@
 mod csrs;
 mod detect;
-mod devices;
+pub mod devices;
 mod ept;
 mod regs;
 mod sbi;
