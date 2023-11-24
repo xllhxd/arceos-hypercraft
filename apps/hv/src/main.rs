@@ -30,8 +30,11 @@ use libax::{
 
 use page_table_entry::MappingFlags;
 
+
+
 #[cfg(target_arch = "riscv64")]
 mod dtb_riscv64;
+use hypercraft::arch::devices::cpu::CpuInfo;
 #[cfg(target_arch = "aarch64")]
 mod dtb_aarch64;
 #[cfg(target_arch = "aarch64")]
@@ -46,25 +49,29 @@ fn main(hart_id: usize) {
 
     #[cfg(target_arch = "riscv64")]
     {
-        // boot cpu
-        PerCpu::<HyperCraftHalImpl>::init(0, 0x4000);
+        let _rc = CpuInfo::parse_from(0x9000_0000);
+        let cpu_info = CpuInfo::get();
+        info!("cpu nums:{}", cpu_info.num_cpus());
+        // boot cpu how to know the real cpu? from the hart_id
+        info!("vm's boot vcpu's id is: {}", hart_id);
+        PerCpu::<HyperCraftHalImpl>::init(hart_id, 0x4000);
 
         // get current percpu
         let pcpu = PerCpu::<HyperCraftHalImpl>::this_cpu();
 
-        // create vcpu
-        let gpt = setup_gpm(0x9000_0000).unwrap();
-        let vcpu = pcpu.create_vcpu(0, 0x9020_0000).unwrap();
+        // create boot vcpu
+        let gpt = setup_gpm(0x9000_0000).unwrap(); // do i need to change the dtb's address?
+        let vcpu = pcpu.create_vcpu(hart_id, 0x9020_0000).unwrap();
         let mut vcpus = VmCpus::new();
 
         // add vcpu into vm
         vcpus.add_vcpu(vcpu).unwrap();
         let mut vm: VM<HyperCraftHalImpl, GuestPageTable> = VM::new(vcpus, gpt).unwrap();
-        vm.init_vcpu(0);
+        vm.init_vcpu(hart_id);
 
         // vm run
         info!("vm run cpu{}", hart_id);
-        vm.run(0);
+        vm.run(hart_id);
     }
     #[cfg(target_arch = "aarch64")]
     {
