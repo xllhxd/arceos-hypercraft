@@ -15,6 +15,7 @@ pub use regs::GprIndex;
 pub use sbi::SbiMessage as HyperCallMsg;
 pub use smp::PerCpu;
 pub use vcpu::VCpu;
+pub use vcpu::VmCpuStatus;
 pub use vm::VM;
 pub use vmexit::VmExitInfo;
 

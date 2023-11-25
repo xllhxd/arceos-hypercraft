@@ -202,6 +202,7 @@ extern "C" {
     fn _run_guest(state: *mut VmCpuRegisters);
 }
 
+/// 
 pub enum VmCpuStatus {
     /// The vCPU is not powered on.
     PoweredOff,
@@ -211,11 +212,18 @@ pub enum VmCpuStatus {
     Running,
 }
 
+impl Default for VmCpuStatus {
+    fn default() -> Self {
+        Self::PoweredOff
+    }
+}
+
 #[derive(Default)]
 /// A virtual CPU within a guest
 pub struct VCpu<H: HyperCraftHal> {
     vcpu_id: usize,
     regs: VmCpuRegisters,
+    status: VmCpuStatus,
     // gpt: G,
     // pub guest: Arc<Guest>,
     marker: PhantomData<H>,
@@ -240,7 +248,7 @@ impl<H: HyperCraftHal> VCpu<H> {
         sstatus.set_spp(sstatus::SPP::Supervisor);
         regs.guest_regs.sstatus = sstatus.bits();
 
-        regs.guest_regs.gprs.set_reg(GprIndex::A0, 0);
+        regs.guest_regs.gprs.set_reg(GprIndex::A0, vcpu_id);
         regs.guest_regs.gprs.set_reg(GprIndex::A1, 0x9000_0000);
 
         // Set entry
@@ -248,9 +256,17 @@ impl<H: HyperCraftHal> VCpu<H> {
         Self {
             vcpu_id,
             regs,
+            status: VmCpuStatus::PoweredOff,
             // gpt,
             marker: PhantomData,
         }
+    }
+
+    ///
+    pub fn init(&mut self, hart_id: usize, start_addr: usize, opaque: usize) {
+        self.regs.guest_regs.gprs.set_reg(GprIndex::A0, hart_id);
+        self.regs.guest_regs.gprs.set_reg(GprIndex::A1, opaque);
+        self.regs.guest_regs.sepc = start_addr;
     }
 
     /// Initialize nested mmu.
@@ -340,6 +356,7 @@ impl<H: HyperCraftHal> VCpu<H> {
                     priv_level: PrivilegeLevel::from_hstatus(regs.guest_regs.hstatus),
                 }
             }
+            Trap::Interrupt(Interrupt::SupervisorSoft) => VmExitInfo::SupervisorSofterInterrupt,
             _ => {
                 panic!(
                     "Unhandled trap: {:?}, sepc: {:#x}, stval: {:#x}",
@@ -374,6 +391,16 @@ impl<H: HyperCraftHal> VCpu<H> {
     /// Gets the vCPU's registers.
     pub fn regs(&mut self) -> &mut VmCpuRegisters {
         &mut self.regs
+    }
+    
+    ///
+    pub fn get_status(&self) -> &VmCpuStatus {
+        &self.status
+    }
+    
+    ///
+    pub fn set_status(&mut self, status: VmCpuStatus) {
+        self.status = status
     }
 }
 

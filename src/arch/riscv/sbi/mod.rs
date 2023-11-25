@@ -4,6 +4,7 @@ mod pmu;
 mod rfnc;
 mod srst;
 mod hsm;
+mod ipi;
 
 use crate::{HyperError, HyperResult};
 pub use base::BaseFunction;
@@ -13,6 +14,8 @@ pub use rfnc::RemoteFenceFunction;
 use sbi_spec;
 pub use srst::ResetFunction;
 pub use hsm::HartStateManagementFunction;
+
+use self::ipi::IPIFunction;
 
 pub const SBI_SUCCESS: usize = 0;
 pub const SBI_ERR_FAILUER: isize = -1;
@@ -62,6 +65,8 @@ pub enum SbiMessage {
     PMU(PmuFunction),
     /// HSM Extension
     Hsm(HartStateManagementFunction),
+    ///
+    IPI(IPIFunction)
 }
 
 impl SbiMessage {
@@ -81,6 +86,7 @@ impl SbiMessage {
             }
             sbi_spec::pmu::EID_PMU => PmuFunction::from_regs(args).map(SbiMessage::PMU),
             sbi_spec::hsm::EID_HSM => HartStateManagementFunction::from_regs(args).map(SbiMessage::Hsm),
+            sbi_spec::spi::EID_SPI => IPIFunction::from_regs(args).map(SbiMessage::IPI),
             _ => {
                 error!("args: {:?}", args);
                 error!("args[7]: {:#x}", args[7]);

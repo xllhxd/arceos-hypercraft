@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 use arrayvec::ArrayVec;
-use spin::Once;
+use spin::{Mutex, Once};
 
 use crate::arch::{VCpu, VM};
 use crate::{GuestPageTableTrait, HyperCraftHal, HyperError, HyperResult,};
@@ -14,7 +14,8 @@ pub const VM_CPUS_MAX: usize = MAX_CPUS;
 /// The set of vCPUs in a VM.
 #[derive(Default)]
 pub struct VmCpus<H: HyperCraftHal> {
-    inner: [Once<VCpu<H>>; VM_CPUS_MAX],
+    /// innner
+    pub inner: [Once<Mutex<VCpu<H>>>; VM_CPUS_MAX],
     marker: core::marker::PhantomData<H>,
 }
 
@@ -32,12 +33,12 @@ impl<H: HyperCraftHal> VmCpus<H> {
         let vcpu_id = vcpu.vcpu_id();
         let once_entry = self.inner.get(vcpu_id).ok_or(HyperError::BadState)?;
 
-        once_entry.call_once(|| vcpu);
+        once_entry.call_once(|| Mutex::new(vcpu));
         Ok(())
     }
 
     /// Returns a reference to the vCPU with `vcpu_id` if it exists.
-    pub fn get_vcpu(&mut self, vcpu_id: usize) -> HyperResult<&mut VCpu<H>> {
+    pub fn get_vcpu(&mut self, vcpu_id: usize) -> HyperResult<&mut Mutex<VCpu<H>>> {
         let vcpu = self
             .inner
             .get_mut(vcpu_id)

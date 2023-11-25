@@ -39,7 +39,21 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
     /// Initialize `VCpu` by `vcpu_id`.
     pub fn init_vcpu(&mut self, vcpu_id: usize) {
         let vcpu = self.vcpus.get_vcpu(vcpu_id).unwrap();
-        vcpu.init_page_map(self.gpt.token());
+        vcpu.lock().init_page_map(self.gpt.token());
+    }
+
+    ///
+    pub fn add_vcpu(&mut self, vcpu: VCpu<H>) -> HyperResult {
+        self.vcpus.add_vcpu(vcpu)
+    }
+
+    ///
+    pub fn is_runnable(&mut self, vcpu_id: usize) -> bool {
+        let vcpu = self.vcpus.get_vcpu(vcpu_id).unwrap();
+        match vcpu.lock().get_status() {
+            vcpu::VmCpuStatus::PoweredOff => false,
+            _ => true,
+        }
     }
 
     #[allow(unused_variables, deprecated)]
@@ -47,16 +61,20 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
     pub fn run(&mut self, vcpu_id: usize) {
         let mut vm_exit_info: VmExitInfo; // maybe i should also add some VmExitInfo
         let mut gprs = GeneralPurposeRegisters::default();
+        while !self.is_runnable(vcpu_id) {
+            // info!("vcpu_id:{}", vcpu_id);
+            core::hint::spin_loop();
+        }
         loop {
             let mut len = 4;
             let mut advance_pc = false;
             {   // run from a new vcpu here? if so i need to get a new vcpu_id
                 let vcpu = self.vcpus.get_vcpu(vcpu_id).unwrap();
-                vm_exit_info = vcpu.run(); // what the run does
-                vcpu.save_gprs(&mut gprs); // Save vCPU registers to the guest's GPRs
+                vm_exit_info = vcpu.lock().run(); // what the run does
+                vcpu.lock().save_gprs(&mut gprs); // Save vCPU registers to the guest's GPRs
                                            //  why use mut here?
             }
-
+            
             match vm_exit_info {
                 VmExitInfo::Ecall(sbi_msg) => {
                     if let Some(sbi_msg) = sbi_msg {
@@ -133,15 +151,19 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
                     CSR.sie
                         .read_and_clear_bits(traps::interrupt::SUPERVISOR_TIMER);
                 }
-                VmExitInfo::ExternalInterruptEmulation => self.handle_irq(),
+                VmExitInfo::ExternalInterruptEmulation => self.handle_irq(vcpu_id),
+                VmExitInfo::SupervisorSofterInterrupt => {
+                    sbi_rt::legacy::clear_ipi();
+                    self.handle_software_irq(vcpu_id)
+                }
                 _ => {}
             }
 
             {
                 let vcpu = self.vcpus.get_vcpu(vcpu_id).unwrap();
-                vcpu.restore_gprs(&gprs);
+                vcpu.lock().restore_gprs(&gprs);
                 if advance_pc {
-                    vcpu.advance_pc(len);
+                    vcpu.lock().advance_pc(len);
                 }
             }
         }
@@ -202,11 +224,22 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
         Ok(len)
     }
 
-    fn handle_irq(&mut self) {
-        let context_id = 1;
+    fn handle_irq(&mut self, vcpu_id: usize) {
+        let context_id = vcpu_id * 2 + 1;
         let claim_and_complete_addr = self.plic.base() + 0x0020_0004 + 0x1000 * context_id;
         let irq = unsafe { core::ptr::read_volatile(claim_and_complete_addr as *const u32) };
-        assert!(irq != 0);
+        // assert!(irq != 0);
+        self.plic.claim_complete[context_id] = irq;
+
+        CSR.hvip
+            .read_and_set_bits(traps::interrupt::VIRTUAL_SUPERVISOR_EXTERNAL);
+    }
+
+    fn handle_software_irq(&mut self, vcpu_id: usize) {
+        let context_id = vcpu_id * 2 + 1;
+        let claim_and_complete_addr = self.plic.base() + 0x0020_0004 + 0x1000 * context_id;
+        let irq = unsafe { core::ptr::read_volatile(claim_and_complete_addr as *const u32) };
+        // assert!(irq != 0);
         self.plic.claim_complete[context_id] = irq;
 
         CSR.hvip
@@ -321,32 +354,16 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
     }
     
     fn handle_hsm_function(
-        &self,
+        &mut self,
         hsm: HartStateManagementFunction,
         gprs: &mut GeneralPurposeRegisters,
     ) -> HyperResult<()> {
-        gprs.set_reg(GprIndex::A0, 0);
-        match hsm {
-            HartStateManagementFunction::HartStart {
-                hartid,
-                start_addr,
-                opaque,
-            } => {
-                let sbi_ret = sbi_rt::hart_start(hartid, start_addr, opaque);
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-            }
-            HartStateManagementFunction::HartStop { hartid: _ } => {
-                let sbi_ret = sbi_rt::hart_stop();
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-            }
-            HartStateManagementFunction::GetHartStatus { hartid } => {
-                let sbi_ret = sbi_rt::hart_get_status(hartid) ;
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-            }
-            HartStateManagementFunction::HartSuspend { hartid: _, suspend_type, resume_addr, opaque } => {
-                let sbi_ret = sbi_rt::hart_suspend(suspend_type as u32, resume_addr, opaque);
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-            }
+        if let HartStateManagementFunction::HartStart { hartid, start_addr, opaque } = hsm {
+            info!("hart start vcpu{} start_addr:{:#X} opaque : {:#X}", hartid, start_addr, opaque);
+            let vcpu = self.vcpus.get_vcpu(hartid).unwrap();
+            vcpu.lock().init(hartid, start_addr, opaque);
+            vcpu.lock().set_status(crate::VmCpuStatus::Runnable);
+            gprs.set_reg(GprIndex::A0, 0);
         }
         Ok(())
     }

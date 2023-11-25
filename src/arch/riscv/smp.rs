@@ -1,5 +1,5 @@
 //! reference: https://github.com/rivosinc/salus/blob/main/src/smp.rs
-use core::arch::asm;
+use core::{arch::asm, sync::atomic::Ordering};
 
 use alloc::{collections::VecDeque, vec::Vec};
 use spin::{Mutex, Once};
@@ -19,23 +19,28 @@ use arrayvec::ArrayVec;
 /// sits at the top of a secondary CPU's stack.
 #[repr(C)]
 pub struct PerCpu<H: HyperCraftHal> {
-    cpu_id: usize,
+    
+    /// cpu id
+    pub cpu_id: usize,
     stack_top_addr: HostVirtAddr,
     marker: core::marker::PhantomData<H>,
     // TODO: `Mutex` is necessary?
-    vcpu_queue: Mutex<VecDeque<usize>>,
+    vcpu_queue: Mutex<VecDeque<usize>>,  // why here is a queue for vcpu? do not nedd for this proj
+    // online: Once<bool>,  //do i need this struc
+        // how to let percpu come online
 }
 
 /// The base address of the per-CPU memory region.
 static PER_CPU_BASE: Once<HostPhysAddr> = Once::new();
 
-impl<H: HyperCraftHal> PerCpu<H> {
+impl<H: HyperCraftHal + 'static> PerCpu<H> {
     /// Initializes the `PerCpu` structures for each CPU. This (the boot CPU's) per-CPU
     /// area is initialized and loaded into TP as well.
     pub fn init(boot_hart_id: usize, stack_size: usize) -> HyperResult<()> {
         // TODO: get cpu info by device tree
         let cpu_info = CpuInfo::get();
         let cpu_nums = cpu_info.num_cpus();
+        info!("cpu_nums:{}", cpu_nums);
         let pcpu_size = core::mem::size_of::<PerCpu<H>>() * cpu_nums;
         debug!("pcpu_size: {:#x}", pcpu_size);
         let pcpu_pages = H::alloc_pages((pcpu_size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K)
@@ -56,6 +61,7 @@ impl<H: HyperCraftHal> PerCpu<H> {
                 stack_top_addr,
                 marker: core::marker::PhantomData,
                 vcpu_queue: Mutex::new(VecDeque::new()),
+                // online: Once::new(),
             };
             let ptr = Self::ptr_for_cpu(cpu_id);
             // Safety: ptr is guaranteed to be properly aligned and point to valid memory owned by
@@ -121,17 +127,3 @@ impl<H: HyperCraftHal> PerCpu<H> {
         Ok(0 as GuestPhysAddr)
     }
 }
-
-// PerCpu state obvioudly cannot be shared between threads.
-// impl<H: HyperCraftHal> !Sync for PerCpu<H> {}
-
-// pub fn start_secondary_cpus() -> Result<(), Error> {
-//     let cpu_info = CpuInfo::get();
-//     let boot_hart_id = PerCpu::this_cpu().cpu_id;
-//     for i in cpu_info.hart_ids {
-//         let hart_id = i;
-//         if hart_id = boot_hart_id {
-//             continue;
-//         }
-//     }
-// }

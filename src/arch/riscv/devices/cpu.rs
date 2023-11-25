@@ -29,7 +29,8 @@ impl CpuId {
 #[derive(Debug)]
 pub struct CpuInfo {
     timer_frequency: usize,
-    hart_ids: ArrayVec<usize, MAX_CPUS_COUNT>,
+    /// hart_id
+    pub hart_ids: ArrayVec<usize, MAX_CPUS_COUNT>,
     intc_phandles: ArrayVec<usize, MAX_CPUS_COUNT>,
 }
 
