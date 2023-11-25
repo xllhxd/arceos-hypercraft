@@ -337,13 +337,13 @@ pub extern "C" fn secondary_main(hart_id: usize) {
         HS_VM.get_mut_unchecked()
     }; 
 
-    info!("add vcpu:{}", vcpu.vcpu_id());
     vm.add_vcpu(vcpu);
+    vm.init_vcpu(hart_id);
     INITED_VCPUS.fetch_add(1, Ordering::Relaxed);
 
     while !is_secondary_init_ok() {
         core::hint::spin_loop();
     }
-    vm.init_vcpu(hart_id);
+    
     vm.run(hart_id);
 }
