@@ -15,7 +15,7 @@ use aarch64_config::GUEST_KERNEL_BASE_VADDR;
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCraftHalImpl, PerCpu,
-        Result, VCpu, VmCpus, VM,
+        Result, VCpu, VmCpus, VM, VmCpuStatus,
     },
     info,
 };
@@ -30,11 +30,20 @@ use libax::{
 
 use page_table_entry::MappingFlags;
 
+use lazy_init::LazyInit;
+
+#[cfg(target_arch = "riscv64")]
+static mut HS_VM: LazyInit<VM<HyperCraftHalImpl, GuestPageTable>> = LazyInit::new();
+
+use core::{sync::atomic::{AtomicUsize, Ordering}, ops::DerefMut};
+
+static INITED_VCPUS: AtomicUsize = AtomicUsize::new(0);
+
 
 
 #[cfg(target_arch = "riscv64")]
 mod dtb_riscv64;
-use hypercraft::arch::devices::cpu::CpuInfo;
+use hypercraft::{arch::devices::cpu::CpuInfo, VmCpuStatus}; // how define the mod?
 #[cfg(target_arch = "aarch64")]
 mod dtb_aarch64;
 #[cfg(target_arch = "aarch64")]
@@ -43,6 +52,11 @@ mod aarch64_config;
 #[cfg(target_arch = "x86_64")]
 mod x64;
 
+fn is_secondary_init_ok() -> bool {
+    let cpu_info = CpuInfo::get();
+    INITED_VCPUS.load(Ordering::Acquire) == cpu_info.num_cpus()
+}
+
 #[no_mangle]
 fn main(hart_id: usize) {
     println!("Hello, hv!");
@@ -50,10 +64,10 @@ fn main(hart_id: usize) {
     #[cfg(target_arch = "riscv64")]
     {
         let _rc = CpuInfo::parse_from(0x9000_0000);
-        let cpu_info = CpuInfo::get();
-        info!("cpu nums:{}", cpu_info.num_cpus());
+        // let cpu_info = CpuInfo::get();
+        // info!("cpu nums:{}", cpu_info.num_cpus());
         // boot cpu how to know the real cpu? from the hart_id
-        info!("vm's boot vcpu's id is: {}", hart_id);
+        // info!("vm's boot vcpu's id is: {}", hart_id);
         PerCpu::<HyperCraftHalImpl>::init(hart_id, 0x4000);
 
         // get current percpu
@@ -61,12 +75,20 @@ fn main(hart_id: usize) {
 
         // create boot vcpu
         let gpt = setup_gpm(0x9000_0000).unwrap(); // do i need to change the dtb's address?
-        let vcpu = pcpu.create_vcpu(hart_id, 0x9020_0000).unwrap();
+        let mut vcpu = pcpu.create_vcpu(hart_id, 0x9020_0000).unwrap();
+        vcpu.set_status(VmCpuStatus::Runnable);
         let mut vcpus = VmCpus::new();
 
         // add vcpu into vm
         vcpus.add_vcpu(vcpu).unwrap();
-        let mut vm: VM<HyperCraftHalImpl, GuestPageTable> = VM::new(vcpus, gpt).unwrap();
+        INITED_VCPUS.fetch_add(1, Ordering::Relaxed);
+        unsafe { HS_VM.init_by(VM::new(vcpus, gpt).unwrap()) };
+        let vm = unsafe { HS_VM.deref_mut() };
+
+        while !is_secondary_init_ok() {
+            core::hint::spin_loop();
+        }
+
         vm.init_vcpu(hart_id);
 
         // vm run
@@ -296,4 +318,32 @@ pub fn setup_gpm(dtb: usize, kernel_entry: usize) -> Result<GuestPageTable> {
     let paddr = gpt.translate(gaddr).unwrap();
     debug!("this is paddr for 0x{:X}: 0x{:X}", gaddr, paddr);
     Ok(gpt)
+}
+
+#[no_mangle]
+pub extern "C" fn secondary_main(hart_id: usize) {
+    while let None = unsafe {
+        HS_VM.try_get()
+    } {
+        core::hint::spin_loop();
+    }
+
+    PerCpu::<HyperCraftHalImpl>::setup_this_cpu(hart_id);
+    
+    let pcpu = PerCpu::<HyperCraftHalImpl>::this_cpu();
+    let vcpu = pcpu.create_vcpu(hart_id, 0).unwrap();
+    
+    let vm = unsafe {
+        HS_VM.get_mut_unchecked()
+    }; 
+
+    info!("add vcpu:{}", vcpu.vcpu_id());
+    vm.add_vcpu(vcpu);
+    INITED_VCPUS.fetch_add(1, Ordering::Relaxed);
+
+    while !is_secondary_init_ok() {
+        core::hint::spin_loop();
+    }
+    vm.init_vcpu(hart_id);
+    vm.run(hart_id);
 }
