@@ -14,6 +14,13 @@ pub enum RemoteFenceFunction {
         start_addr: u64,
         size: u64,
     },
+    RemoteSFenceVMAASID {
+        hart_mask: u64,
+        hart_mask_base: u64,
+        start_addr: u64,
+        size: u64,
+        asid: u64,
+    },
 }
 
 impl RemoteFenceFunction {
@@ -29,7 +36,14 @@ impl RemoteFenceFunction {
                 start_addr: args[2] as u64,
                 size: args[3] as u64,
             }),
-            _ => panic!("Unsupported yet!"),
+            sbi_spec::rfnc::REMOTE_SFENCE_VMA_ASID => Ok(Self::RemoteSFenceVMAASID {
+                hart_mask: args[0] as u64,
+                hart_mask_base: args[1] as u64,
+                start_addr: args[2] as u64,
+                size: args[3] as u64,
+                asid: args[4] as u64,
+            }),
+            _ => panic!("Unsupported yet! FID{}", args[6]),
         }
     }
 }

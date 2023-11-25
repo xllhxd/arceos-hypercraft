@@ -14,8 +14,7 @@ pub use rfnc::RemoteFenceFunction;
 use sbi_spec;
 pub use srst::ResetFunction;
 pub use hsm::HartStateManagementFunction;
-
-use self::ipi::IPIFunction;
+pub use ipi::IPIFunction;
 
 pub const SBI_SUCCESS: usize = 0;
 pub const SBI_ERR_FAILUER: isize = -1;

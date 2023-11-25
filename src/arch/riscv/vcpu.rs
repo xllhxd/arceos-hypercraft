@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use core::arch::global_asm;
+use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::mem::size_of;
 use memoffset::offset_of;
@@ -203,6 +204,7 @@ extern "C" {
 }
 
 /// 
+#[derive(Debug)]
 pub enum VmCpuStatus {
     /// The vCPU is not powered on.
     PoweredOff,

@@ -4,7 +4,7 @@ use super::{
     devices::plic::{PlicState, MAX_CONTEXTS},
     regs::GeneralPurposeRegisters,
     sbi::PmuFunction,
-    sbi::{BaseFunction, RemoteFenceFunction, HartStateManagementFunction},
+    sbi::{BaseFunction, RemoteFenceFunction, HartStateManagementFunction, IPIFunction},
     traps,
     vcpu::{self, VmCpuRegisters},
     vm_pages::VmPages,
@@ -62,9 +62,9 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
         let mut vm_exit_info: VmExitInfo; // maybe i should also add some VmExitInfo
         let mut gprs = GeneralPurposeRegisters::default();
         while !self.is_runnable(vcpu_id) {
-            // info!("vcpu_id:{}", vcpu_id);
             core::hint::spin_loop();
         }
+        info!("vm run on vcpu:{}", vcpu_id);
         loop {
             let mut len = 4;
             let mut advance_pc = false;
@@ -110,6 +110,11 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
                             }
                             HyperCallMsg::Hsm(hsm) => {
                                 self.handle_hsm_function(hsm, &mut gprs).unwrap();
+                            }
+                            HyperCallMsg::IPI(ipi) => {
+                                let IPIFunction::SendIPI { hart_mask, hart_mask_base } = ipi;
+                                sbi_rt::send_ipi(hart_mask, hart_mask_base);
+                                gprs.set_reg(GprIndex::A0, 0);
                             }
                             _ => todo!()
                         }
@@ -243,7 +248,7 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
         self.plic.claim_complete[context_id] = irq;
 
         CSR.hvip
-            .read_and_set_bits(traps::interrupt::VIRTUAL_SUPERVISOR_EXTERNAL);
+            .read_and_set_bits(traps::interrupt::VIRTUAL_SUPERVISOR_SOFT);
     }
 
     fn handle_base_function(
@@ -349,10 +354,28 @@ impl<H: HyperCraftHal, G: GuestPageTableTrait> VM<H, G> {
                 gprs.set_reg(GprIndex::A0, sbi_ret.error);
                 gprs.set_reg(GprIndex::A1, sbi_ret.value);
             }
+            RemoteFenceFunction::RemoteSFenceVMAASID {
+                hart_mask,
+                hart_mask_base,
+                start_addr,
+                size,
+                asid,
+            } => {
+                let sbi_ret = sbi_rt::remote_sfence_vma_asid(
+                    hart_mask as usize,
+                    hart_mask_base as usize,
+                    start_addr as usize,
+                    size as usize,
+                    asid as usize,
+                );
+                gprs.set_reg(GprIndex::A0, sbi_ret.error);
+                gprs.set_reg(GprIndex::A1, sbi_ret.value);
+            }
         }
         Ok(())
     }
     
+    //version2
     fn handle_hsm_function(
         &mut self,
         hsm: HartStateManagementFunction,

@@ -127,3 +127,5 @@ impl<H: HyperCraftHal + 'static> PerCpu<H> {
         Ok(0 as GuestPhysAddr)
     }
 }
+
+impl<H: HyperCraftHal> !Sync for PerCpu<H> {}
