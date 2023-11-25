@@ -54,7 +54,7 @@ mod x64;
 
 fn is_secondary_init_ok() -> bool {
     let cpu_info = CpuInfo::get();
-    INITED_VCPUS.load(Ordering::Acquire) == cpu_info.num_cpus()
+    INITED_VCPUS.load(Ordering::Acquire) == 2
 }
 
 #[no_mangle]
@@ -344,6 +344,6 @@ pub extern "C" fn secondary_main(hart_id: usize) {
     while !is_secondary_init_ok() {
         core::hint::spin_loop();
     }
-    
+
     vm.run(hart_id);
 }
