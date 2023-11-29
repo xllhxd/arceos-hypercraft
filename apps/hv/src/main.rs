@@ -54,7 +54,7 @@ mod x64;
 
 fn is_secondary_init_ok() -> bool {
     let cpu_info = CpuInfo::get();
-    INITED_VCPUS.load(Ordering::Acquire) == 2
+    INITED_VCPUS.load(Ordering::Acquire) == cpu_info.num_cpus()
 }
 
 #[no_mangle]
@@ -81,15 +81,14 @@ fn main(hart_id: usize) {
 
         // add vcpu into vm
         vcpus.add_vcpu(vcpu).unwrap();
-        INITED_VCPUS.fetch_add(1, Ordering::Relaxed);
         unsafe { HS_VM.init_by(VM::new(vcpus, gpt).unwrap()) };
         let vm = unsafe { HS_VM.deref_mut() };
+        vm.init_vcpu(hart_id);
+        INITED_VCPUS.fetch_add(1, Ordering::Relaxed);
 
         while !is_secondary_init_ok() {
             core::hint::spin_loop();
         }
-
-        vm.init_vcpu(hart_id);
 
         // vm run
         info!("vm run cpu{}", hart_id);
