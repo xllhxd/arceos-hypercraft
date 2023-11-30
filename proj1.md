@@ -1,364 +1,76 @@
-# 修改 linux.dts 并编译为 linux.dtb
+# 我做了哪些工作
 
-```dts
-// apps/hv/guest/linux/linux.dts 39-142
-cpus {
-	#address-cells = <0x01>;
-	#size-cells = <0x00>;
-	timebase-frequency = <0x989680>;
+- 修改 dts 并编译为 dts 以及设计 cpu.rs 来解析设备树
+- 增加 SbiMessage `HSM(HSMFunction)`
+- 增加多核启动的内容
+  - 使用静态变量 `INITED_VCPUS` 与 `HS_VM` 
+  - 使用 *spin_table* 的方式启动多核
+  - 在 arceos 多核启动的最后一个流程跳转到虚拟机的多核启动
+- 增加 SbiMessage `IPI(IPIFunction)`
 
-	cpu@0 {
-		phandle = <0x01>;
-		device_type = "cpu";
-		reg = <0x00>;
-		status = "okay";
-		compatible = "riscv";
-		riscv,isa = "rv64ima";
-		mmu-type = "riscv,sv39";
 
-		interrupt-controller {
-			#interrupt-cells = <0x01>;
-			interrupt-controller;
-			compatible = "riscv,cpu-intc";
-			phandle = <0x02>;
-		};
-	};
+# 详细介绍
 
-	cpu@1 {
-		phandle = <0x05>;
-		device_type = "cpu";
-		reg = <0x01>;
-		status = "okay";
-		compatible = "riscv";
-		riscv,isa = "rv64ima";
-		mmu-type = "riscv,sv39";
-	
-		interrupt-controller {
-			#interrupt-cells = <0x01>;
-			interrupt-controller;
-			compatible = "riscv,cpu-intc";
-			phandle = <0x06>;
-		};
-	};
-	
-	cpu@2 {
-		phandle = <0x07>;
-		device_type = "cpu";
-		reg = <0x02>;
-		status = "okay";
-		compatible = "riscv";
-		riscv,isa = "rv64ima";
-		mmu-type = "riscv,sv39";
-	
-		interrupt-controller {
-			#interrupt-cells = <0x01>;
-			interrupt-controller;
-			compatible = "riscv,cpu-intc";
-			phandle = <0x08>;
-		};
-	};
-	
-	cpu@3 {
-		phandle = <0x09>;
-		device_type = "cpu";
-		reg = <0x03>;
-		status = "okay";
-		compatible = "riscv";
-		riscv,isa = "rv64ima";
-		mmu-type = "riscv,sv39";
-	
-		interrupt-controller {
-			#interrupt-cells = <0x01>;
-			interrupt-controller;
-			compatible = "riscv,cpu-intc";
-			phandle = <0x0A>;
-		};
-	};
-	
-	cpu-map {
-	
-		cluster0 {
-	
-			core0 {
-				cpu = <0x01>;
-			};
-		};
-	
-		cluster1 {
-	
-			core0 {
-				cpu = <0x05>;
-			};
-		};
-	
-		cluster2 {
-	
-			core0 {
-				cpu = <0x07>;
-			};
-		};
-	
-		cluster3 {
-	
-			core0 {
-				cpu = <0x09>;
-			};
-		};
-	};
-};
+## step1——设备树
+
+设备树（Device Tree）的更改并编译没有什么困难的地方，不再赘述。但看群里似乎可以通过更改 Makefile 的方式来进行自动的修改，但还没有时间做这里的优化。
+
+而之所以想到要用 cpu.rs 来做设备树的解析工作是参考了 [salus](https://github.com/rivosinc/salus) 的实现。所以这里我也用 fdt crate 做了设备树的解析，而 salus 则是使用了自己定义的 crate。
+
+这里分析一下设备树的结构
+
 ```
+- fdt
+    - node
+        - roperty
+        - node
+```
+
+从最顶端的 fdt 获取节点可以使用 `pub fn find_node(&self, path: &str) -> Option<FdtNode<'_, 'a>>` 或者 `pub fn find_all_nodes(&self, path: &'a str) -> impl Iterator<Item = FdtNode<'_, 'a>>` 获得 FdtNode 结构体，而想要在上述结构体中获得 node 则只能使用 `pub fn children(self) -> impl Iterator<Item = FdtNode<'b, 'a>>`
+
+## step——HSM
+
+在做完上述修改之后，运行，得到下面的报错：
 
 ```shell
-xuzx@ubuntu:~/arceos/apps/hv/guest/linux$ dtc -O dtb -b 0 -o linux.dtb linux.dts
-linux.dts:165.12-170.5: Warning (simple_bus_reg): /soc/poweroff: missing or empty reg/ranges property
-linux.dts:172.10-177.5: Warning (simple_bus_reg): /soc/reboot: missing or empty reg/ranges property
-linux.dts:260.4-48: Warning (interrupts_extended_property): /soc/plic@c000000:interrupts-extended: cell 0 is not a phandle reference
-linux.dts:260.4-48: Warning (interrupts_extended_property): /soc/plic@c000000:interrupts-extended: cell 2 is not a phandle reference
-linux.dts:267.4-48: Warning (interrupts_extended_property): /soc/clint@2000000:interrupts-extended: cell 0 is not a phandle reference
-linux.dts:267.4-48: Warning (interrupts_extended_property): /soc/clint@2000000:interrupts-extended: cell 2 is not a phandle reference
-linux.dts:53.25-58.6: Warning (interrupt_provider): /cpus/cpu@0/interrupt-controller: Missing #address-cells in interrupt provider
-linux.dts:70.25-75.6: Warning (interrupt_provider): /cpus/cpu@1/interrupt-controller: Missing #address-cells in interrupt provider
-linux.dts:87.25-92.6: Warning (interrupt_provider): /cpus/cpu@2/interrupt-controller: Missing #address-cells in interrupt provider
-linux.dts:104.25-109.6: Warning (interrupt_provider): /cpus/cpu@3/interrupt-controller: Missing #address-cells in interrupt provider
-linux.dts:256.16-264.5: Warning (interrupt_provider): /soc/plic@c000000: Missing #address-cells in interrupt provider
+[  0.782353 0 hypercraft::arch::sbi:80] args: [1, 2418020454, 2533065584, 0, 0, 0, 0, 4739917]
+[  0.797255 0 hypercraft::arch::sbi:81] args[7]: 0x48534d
+[  0.799761 0 hypercraft::arch::sbi:82] EID_RFENCE: 0x52464e43
+[  0.802749 0 axruntime::lang_items:5] panicked at 'explicit panic', /home/xuzx/arceos/crates/hypercraft/src/arch/riscv/vm.rs:96:25
 ```
 
-# 创建 cpu.rs 并解析 linux.dtb
+开始看到这个错误毫无思路，虽然看到了是由于 SbiMessage 出现的问题，但我没有想到需要增加新的扩展进去，看源码，找到了是 **crates/hypercraft/src/arch/riscv/vcpu.rs** 中执行 `run()` 之后会跳转到相应的 SbiMessage 处，而这之前有一段汇编代码，我认为是这里出了问题，想要调试一下，无果，因为我也不知道寄存器这么变化是因为什么。在卡了一段时间之后我搜索了 `EID_RFENCE: 0x52464e43` 这个错误，然后发现是不支持 HSM，增加信息之后仍然报错：
 
-```Rust
-// crates/hypercraft/src/arch/riscv/devices/cpu.rs
-use arrayvec::{ArrayString, ArrayVec};
-use spin::Once;
-use core::fmt;
-use fdt::Fdt;
-/// const
-const MAX_ISA_STRING_LEN: usize = 256;
-
-/// const
-pub const MAX_CPUS_COUNT: usize = 128;
-
-/// Logical CPU number. Not necessarily the same as hart ID; see `CpuInfo` for translating between
-/// hart ID and logical CPU ID.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-pub struct CpuId(usize);
-
-impl CpuId {
-    /// function
-    pub fn new(raw: usize) -> Self {
-        CpuId(raw)
-    }
-    /// function
-    pub fn raw(&self) -> usize {
-        self.0
-    }
-}
-
-/// Holds static global information about CPU features and topology.
-#[derive(Debug)]
-pub struct CpuInfo {
-    timer_frequency: usize,
-    /// hart_id
-    pub hart_ids: ArrayVec<usize, MAX_CPUS_COUNT>,
-    intc_phandles: ArrayVec<usize, MAX_CPUS_COUNT>,
-}
-
-/// Error for CpuInfo creation
-#[derive(Debug)]
-pub enum Error {
-    /// Child node missing from parent
-    MissingChildNode(&'static str, &'static str),
-    /// Property missing on a node
-    MissingFdtProperty(&'static str, &'static str),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Error::*;
-        match self {
-            MissingChildNode(child, parent) => {
-                write!(f, "Child node {} missing on {} parent node", child, parent)
-            }
-            MissingFdtProperty(property, node) => {
-                write!(f, "Property {} missing on {} node", property, node)
-            }
-        }
-    }
-}
-
-static CPU_INFO: Once<CpuInfo> = Once::new(); // 
-
-impl CpuInfo {
-    /// function
-    pub fn parse_from(dtb: usize) -> Result<(), Error> {
-        let fdt = unsafe { Fdt::from_ptr(dtb as *const u8)}.unwrap();
-        let cpus_node = fdt.find_node("/cpus").unwrap();
-        // timer_frequency
-        let tf = cpus_node.property("timebase-frequency").unwrap().as_usize().unwrap();
-        // hard_ids and intc_phandles
-        let mut hart_ids: ArrayVec<usize, MAX_CPUS_COUNT> = ArrayVec::new();
-        let mut intc_phandles: ArrayVec<usize, MAX_CPUS_COUNT> = ArrayVec::new();
-        for cpu in cpus_node.children() {
-            if cpu.name == "cpu-map" {
-                break;
-            }
-            hart_ids.push(cpu.property("reg").unwrap().as_usize().unwrap());
-            for cpu_int in cpu.children() {
-                intc_phandles.push(cpu_int.property("phandle").unwrap().as_usize().unwrap());
-            }
-        }
-        let cpu_info = CpuInfo {
-            timer_frequency: tf,
-            hart_ids: hart_ids,
-            intc_phandles: intc_phandles,
-        };
-        info!("{}", tf);
-        CPU_INFO.call_once(||cpu_info);
-        info!("{:?}", CPU_INFO);
-        Ok(())
-    }
-
-    /// function
-    pub fn get() -> &'static CpuInfo {
-        CPU_INFO.get().unwrap()
-    }
-
-    /// function
-    pub fn num_cpus(&self) -> usize {
-        self.hart_ids.len()
-    }
-}
-
+```shell
+[  0.347916 0 axruntime::lang_items:5] panicked at 'not yet implemented', /home/xuzx/arceos/crates/hypercraft/src/arch/riscv/vm.rs:119:34
 ```
 
-这里由于我对 Rust 的模块系统不太了解，在让 **apps/hv/src/main.rs* 可见的时候基本编译器说哪里错哪里改的。
+这个错误比较好定位，因为我没有实现相应的 SbiMessage 的处理函数。但写出了第一版的处理函数之后程序仍然运行报错：
 
-# 解析 SbiMessage 使其支持 HSM 扩展
-
-新增 **crates/hypercraft/src/arch/riscv/sbi/hsm.rs**
-
-```Rust
-// from new bing
-use crate::HyperResult;
-
-/// Functions defined for the Hart State Management extension
-#[derive(Clone, Copy, Debug)]
-pub enum HartStateManagementFunction {
-    /// Start the hart with the given ID and address
-    HartStart {
-        hartid: usize,
-        start_addr: usize,
-        opaque: usize,
-    },
-    /// Stop the hart with the given ID
-    HartStop {
-        hartid: usize,
-    },
-    /// Get the status of the hart with the given ID
-    GetHartStatus {
-        hartid: usize,
-    },
-    /// Suspend the hart with the given ID and type
-    HartSuspend {
-        hartid: usize,
-        suspend_type: usize,
-        resume_addr: usize,
-        opaque: usize,
-    },
-}
-
-impl HartStateManagementFunction {
-    pub(crate) fn from_regs(args: &[usize]) -> HyperResult<Self> {
-        match args[6] {
-            0 => Ok(Self::HartStart {
-                hartid: args[0],
-                start_addr: args[1],
-                opaque: args[2],
-            }),
-            1 => Ok(Self::HartStop {
-                hartid: args[0],
-            }),
-            2 => Ok(Self::GetHartStatus {
-                hartid: args[0],
-            }),
-            3 => Ok(Self::HartSuspend {
-                hartid: args[0],
-                suspend_type: args[1],
-                resume_addr: args[2],
-                opaque: args[3],
-            }),
-            _ => Err(crate::HyperError::NotFound),
-        }
-    }
-}
-
+```shell
+[  0.297477 1 axruntime::lang_items:5] panicked at 'Unhandled trap: Exception(InstructionGuestPageFault), sepc: 0x0, stval: 0x0', /home/xuzx/arceos/crates/hypercraft/src/arch/riscv/vcpu.rs:363:17
 ```
 
-修改 **crates/hypercraft/src/arch/riscv/sbi/mod.rs**
+很明显是没有找到正确的入口函数，但我仔细检查了之后仍然没有发现错误，参考了 刘金成 的实现，仍然需要排查第一版的实现哪里出现了问题。
 
-```Rust
-sbi_spec::hsm::EID_HSM=>HartStateManagementFunction::from_regs(args).map(SbiMessage::Hsm)
-```
+## step3——多核逻辑
 
-修改 **crates/hypercraft/src/arch/riscv/vm.rs**
+其实做完了上面的工作，就有点进行不下去了。因为根据代码中的注释以及 salus 的实现过程，应该尝试使用汇编来做整个工作。我尝试在 **crates/hypercraft/src/arch/riscv/smp.rs** 中增加 PerCpu 的一个方法 `start_secondary_cpus()` 然后再进行类似 salus 以及 arceos 的 `start_scondary_cpu()` 的工作，但尝试写了汇编之后程序只能正常运行，但不能查看出 cpu 的信息。而我现在的设想则是，如果想要完成上述工作，是不是要把前面的 cpu.rs 文件放到 apps 下面，这样可以更好的区分硬件和 Rust 的执行过程。由 cpu.rs 执行硬件相关的内容然后进入 Rust 世界再到 hypercraft 中来操作，但由于汇编不太会写，所以还没有实现。
 
-```Rust
-fn handle_hsm_function(
+后来在讨论会上提到了使用静态变量的方法来实现这件事情我尝试那么做之后，发现的确可以运行。主要是下面的过程：
 
-        &self,
+- 主核首先初始化
+- 从核初始化
+- 从核初始化完成后主核启动(vm.run)
 
-        hsm: HartStateManagementFunction,
+并且由于新增了处理器的状态，所以在执行的过程中也需要检测相应的状态
 
-        gprs: &mut GeneralPurposeRegisters,
+## step4——IPI
 
-    ) -> HyperResult<()> {
+在完成上述的多核逻辑的增加之后处理核间中断的内容也是由报错信息提供的，但对于核间中断的内容还需要更多的了解
 
-        gprs.set_reg(GprIndex::A0, 0);
+## step-支持更多的核
 
-        match hsm {
+由于上述的过程中只能支持两个核心的运行，当多余两个核心的时候程序会陷入死循环，最后定位到的错误是在 CPU 状态的检测中会出现死循环，但明明设置了 CPU 为可执行状态，这里百思不得其解。
 
-            HartStateManagementFunction::HartStart {
-
-                hartid,
-
-                start_addr,
-
-                opaque,
-
-            } => {
-
-                let sbi_ret = sbi_rt::hart_start(hartid, start_addr, opaque);
-
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-
-            }
-
-            HartStateManagementFunction::HartStop { hartid: _ } => {
-
-                let sbi_ret = sbi_rt::hart_stop();
-
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-
-            }
-
-            HartStateManagementFunction::GetHartStatus { hartid } => {
-
-                let sbi_ret = sbi_rt::hart_get_status(hartid) ;
-
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-
-            }
-
-            HartStateManagementFunction::HartSuspend { hartid: _, suspend_type, resume_addr, opaque } => {
-
-                let sbi_ret = sbi_rt::hart_suspend(suspend_type as u32, resume_addr, opaque);
-
-                gprs.set_reg(GprIndex::A0, sbi_ret.error);
-
-            }
-
-        }
-
-        Ok(())
-
-    }
-```
+而这周解决这个问题的思路出了问题，我认为是多核启动的过程中没有完成同步工作，我找了很多多核启动流程的资料，但现在感觉这个应该更多的和 SBI 以及中断相关。
