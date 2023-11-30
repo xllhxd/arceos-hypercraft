@@ -28,7 +28,7 @@
 
 从最顶端的 fdt 获取节点可以使用 `pub fn find_node(&self, path: &str) -> Option<FdtNode<'_, 'a>>` 或者 `pub fn find_all_nodes(&self, path: &'a str) -> impl Iterator<Item = FdtNode<'_, 'a>>` 获得 FdtNode 结构体，而想要在上述结构体中获得 node 则只能使用 `pub fn children(self) -> impl Iterator<Item = FdtNode<'b, 'a>>`
 
-## step——HSM
+## step2——HSM
 
 在做完上述修改之后，运行，得到下面的报错：
 
@@ -69,7 +69,7 @@
 
 在完成上述的多核逻辑的增加之后处理核间中断的内容也是由报错信息提供的，但对于核间中断的内容还需要更多的了解
 
-## step-支持更多的核
+## step5——支持更多的核
 
 由于上述的过程中只能支持两个核心的运行，当多余两个核心的时候程序会陷入死循环，最后定位到的错误是在 CPU 状态的检测中会出现死循环，但明明设置了 CPU 为可执行状态，这里百思不得其解。
 
